@@ -1047,7 +1047,99 @@ h1.editable, p.editable, span.editable { padding: 2px 6px; margin-left: -6px; }
 
   </style>
 </head>
-<body>
+<body class="radar-sin-sesion">
+
+<style>
+body.radar-sin-sesion #root,body.radar-sin-sesion .skip-link{display:none!important}
+#radar-ingreso{position:fixed;inset:0;z-index:100000;background:radial-gradient(ellipse at 15% 10%,#13373b,transparent 55%),#0d1219;display:grid;place-items:center;padding:24px;color:#eef3f5;font-family:Arial,sans-serif;overflow:auto}
+#radar-ingreso[hidden],#radar-cerrar[hidden]{display:none!important}
+#radar-ingreso form{width:min(100%,440px);padding:32px;background:#171e27;border:1px solid #33404c;border-radius:22px}
+#radar-ingreso h1{font: bold 36px Georgia,serif;margin:0 0 18px}#radar-ingreso h1 span{color:#00c5ce}
+#radar-ingreso p{font-size:14px;line-height:1.6;color:#aab7c1}
+#radar-ingreso label{display:block;margin:20px 0 8px;font-size:14px}
+#radar-ingreso input{box-sizing:border-box;width:100%;padding:14px;background:#101720;border:1px solid #3a4855;border-radius:10px;color:white;font:16px Arial}
+#radar-ingreso button,#radar-cerrar{padding:14px;border:0;border-radius:10px;background:#00c5ce;color:#092125;font:bold 14px Arial;cursor:pointer}
+#radar-ingreso button{width:100%;margin-top:24px}#radar-ingreso button:disabled{opacity:.6;cursor:wait}
+#radar-cerrar{position:fixed;bottom:14px;right:14px;z-index:100000;padding:10px 14px}
+#radar-acceso-mensaje{min-height:24px}#radar-ingreso :focus-visible{outline:2px solid #00c5ce;outline-offset:3px}
+@media(max-width:650px){#radar-cerrar{bottom:70px}}
+</style>
+<section id="radar-ingreso" aria-label="Ingreso al radar">
+<form id="radar-acceso-form">
+<h1>Radar <span>Laive</span></h1>
+<p>Ingresa con tus credenciales de prueba.</p>
+<label for="radar-usuario">Usuario</label><input id="radar-usuario" autocomplete="username" required maxlength="100">
+<label for="radar-clave">Contraseña</label><input id="radar-clave" type="password" autocomplete="current-password" required maxlength="200">
+<button id="radar-entrar" type="submit">Ingresar</button>
+<p id="radar-acceso-mensaje" role="status" aria-live="polite"></p>
+<p>Vista previa E03 · Datos ficticios · OneDrive pendiente.</p>
+</form></section>
+<button id="radar-cerrar" type="button" hidden>Cerrar sesión</button>
+<script>
+window.RadarAcceso = (() => {
+  const URL_API = 'https://script.google.com/macros/s/AKfycby5S9Jtrk_vlBlZUnF5_eq3G7_F1od0KatoK6fxGzfX93cmSSlpzitM_ogBsLOLW-ibFg/exec';
+  const el = id => document.getElementById(id);
+  let token = '', usuario = '', resolver, comprobando = false;
+  const listo = new Promise(resolve => { resolver = resolve; });
+  const mensaje = texto => { el('radar-acceso-mensaje').textContent = texto; };
+  async function solicitud(datos) {
+    const control = new AbortController();
+    const temporizador = setTimeout(() => control.abort(), 45000);
+    try {
+      const r = await fetch(URL_API, {method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},credentials:'omit',body:JSON.stringify(datos),signal:control.signal});
+      if (!r.ok) throw new Error('Respuesta HTTP ' + r.status);
+      const d = await r.json();
+      if (!d || typeof d.ok !== 'boolean') throw new Error('Respuesta inesperada.');
+      return d;
+    } catch(e) {
+      if(e.name === 'AbortError') throw new Error('Se agotó el tiempo de espera. Intenta nuevamente.');
+      throw e;
+    } finally { clearTimeout(temporizador); }
+  }
+  function bloquear(texto) {
+    token = ''; usuario = '';
+    document.body.classList.add('radar-sin-sesion');
+    el('radar-ingreso').hidden = false; el('radar-cerrar').hidden = true;
+    mensaje(texto); el('radar-clave').value = '';
+    document.body.style.overflow = '';
+  }
+  async function validar() {
+    if (!token) throw new Error('Debes iniciar sesión.');
+    const d = await solicitud({accion:'consultar',token});
+    if (!d.ok) { bloquear(d.mensaje); throw new Error(d.mensaje); }
+    return d;
+  }
+  el('radar-acceso-form').addEventListener('submit',async e => {
+    e.preventDefault(); el('radar-entrar').disabled=true; mensaje('Comprobando acceso…');
+    try {
+      const d = await solicitud({accion:'ingresar',usuario:el('radar-usuario').value.trim(),clave:el('radar-clave').value});
+      if(!d.ok) throw new Error(d.mensaje);
+      if(typeof d.token !== 'string' || d.token.length !== 72) throw new Error('Sesión inválida.');
+      token=d.token; const sesion=await validar(); usuario=sesion.usuario;
+      el('radar-clave').value=''; el('radar-ingreso').hidden=true; el('radar-cerrar').hidden=false;
+      document.body.classList.remove('radar-sin-sesion'); mensaje(''); resolver();
+    } catch(e) { bloquear(e.message); }
+    finally { el('radar-entrar').disabled=false; }
+  });
+  el('radar-cerrar').addEventListener('click',async () => {
+    el('radar-cerrar').disabled=true;
+    try {
+      const d=await solicitud({accion:'salir',token});
+      bloquear(d.ok?'Sesión cerrada.':d.mensaje);
+    } catch(e) { bloquear('Se cerró la vista local; no se confirmó el cierre en el servidor.'); }
+    finally { el('radar-cerrar').disabled=false; }
+  });
+  // Revisa la sesión mientras la pestaña está visible. Un fallo de red bloquea la vista.
+  setInterval(async () => {
+    if(!token || document.hidden || comprobando) return;
+    comprobando=true;
+    try { await validar(); } catch(e) { bloquear('Vuelve a ingresar para validar tu sesión.'); }
+    finally { comprobando=false; }
+  },60000);
+  return Object.freeze({listo,validar});
+})();
+</script>
+
 <div style="position:fixed;bottom:12px;left:12px;z-index:99999;background:#08334c;color:white;padding:10px 16px;border:1px solid #00cad2;border-radius:10px;font:13px sans-serif;max-width:90vw">E03 · Vista previa con datos ficticios · Guardado pendiente de conexión</div>
   <a class="skip-link" href="#main">Saltar al contenido</a>
 
@@ -2321,6 +2413,7 @@ function finalizar(data) {
  * @param {{forzar?:boolean}} opts
  */
 async function cargarDataset(opts = {}) {
+  await window.RadarAcceso.validar();
   estadoFuente.origen = "demo";
   estadoFuente.ultimaSync = new Date();
   return construirDataset([{"ID": "DEMO-001", "Marca": "Marca demo A", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Promoción", "Título": "Promoción de ejemplo en tienda", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-08-05", "Canal": "Supermercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-002", "Marca": "Marca demo B", "Categoría": "Cárnicos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Degustación", "Título": "Degustación de producto de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-08-06", "Canal": "Mercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-003", "Marca": "Marca demo C", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Lanzamiento", "Título": "Lanzamiento de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-08-07", "Canal": "Redes sociales", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-004", "Marca": "Marca demo A", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Promoción", "Título": "Promoción de ejemplo en tienda", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-09-08", "Canal": "Supermercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-005", "Marca": "Marca demo B", "Categoría": "Cárnicos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Degustación", "Título": "Degustación de producto de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-09-09", "Canal": "Mercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-006", "Marca": "Marca demo C", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Lanzamiento", "Título": "Lanzamiento de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-09-10", "Canal": "Redes sociales", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-007", "Marca": "Marca demo A", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Promoción", "Título": "Promoción de ejemplo en tienda", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-10-11", "Canal": "Supermercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-008", "Marca": "Marca demo B", "Categoría": "Cárnicos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Degustación", "Título": "Degustación de producto de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-10-12", "Canal": "Mercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-009", "Marca": "Marca demo C", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Lanzamiento", "Título": "Lanzamiento de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-10-13", "Canal": "Redes sociales", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}]);
@@ -4261,7 +4354,8 @@ function mensajeError(err) {
 /* ============================================================
    Arranque
    ============================================================ */
-function iniciar() {
+async function iniciar() {
+  await window.RadarAcceso.listo;
   aplicarTema(temaInicial());
   Anim.init();
   window.addEventListener("hashchange", aplicarHash);
