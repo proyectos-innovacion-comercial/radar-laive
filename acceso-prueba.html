@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Radar Laive · Acceso de prueba</title>
+<style>
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; min-height: 100vh; display: grid;
+    place-items: center; padding: 24px;
+    background: #101720; color: #eef3f5;
+    font-family: Arial, sans-serif;
+  }
+  main {
+    width: 100%; max-width: 430px; padding: 32px;
+    background: #171e27; border: 1px solid #33404c;
+    border-radius: 20px;
+  }
+  h1 { margin-top: 0; }
+  h1 span { color: #00c5ce; }
+  p { line-height: 1.6; color: #b4c1ca; }
+  label { display: block; margin: 18px 0 8px; }
+  input {
+    width: 100%; padding: 13px; border-radius: 9px;
+    border: 1px solid #40505e; background: #101720;
+    color: white; font-size: 16px;
+  }
+  button {
+    width: 100%; margin-top: 18px; padding: 14px;
+    border: 0; border-radius: 9px; background: #00c5ce;
+    color: #092125; font-size: 15px; font-weight: bold;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .6; cursor: wait; }
+  .secondary { background: #33404c; color: white; }
+  #resultado { min-height: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Radar <span>Laive</span></h1>
+
+  <form id="formulario">
+    <p>Ingresa con las credenciales nuevas de esta prueba.</p>
+
+    <label for="usuario">Usuario</label>
+    <input id="usuario" autocomplete="username"
+      maxlength="100" required>
+
+    <label for="clave">Contraseña</label>
+    <input id="clave" type="password"
+      autocomplete="current-password" maxlength="200" required>
+
+    <button type="submit">Ingresar</button>
+  </form>
+
+  <section id="sesion" hidden>
+    <h2 id="bienvenida"></h2>
+    <p>Sesión de prueba validada por Apps Script.</p>
+    <button id="consultar" type="button">Consultar prueba</button>
+    <button id="salir" class="secondary" type="button">
+      Cerrar sesión
+    </button>
+  </section>
+
+  <p id="resultado" role="status" aria-live="polite"></p>
+  <p><small>Prueba sin conexión al Excel ni a fotografías.</small></p>
+</main>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycby5S9Jtrk_vlBlZUnF5_eq3G7_F1od0KatoK6fxGzfX93cmSSlpzitM_ogBsLOLW-ibFg/exec';
+
+const el = id => document.getElementById(id);
+let tokenSesion = '';
+
+function mensaje(texto) {
+  el('resultado').textContent = texto;
+}
+
+function ocupado(valor) {
+  document.querySelectorAll('button').forEach(b => {
+    b.disabled = valor;
+  });
+}
+
+function mostrarIngreso() {
+  el('formulario').hidden = false;
+  el('sesion').hidden = true;
+  el('bienvenida').textContent = '';
+}
+
+async function solicitar(datos) {
+  const control = new AbortController();
+  const espera = setTimeout(() => control.abort(), 45000);
+
+  try {
+    const respuesta = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      credentials: 'omit',
+      body: JSON.stringify(datos),
+      signal: control.signal
+    });
+
+    if (!respuesta.ok) {
+      throw new Error('Respuesta HTTP ' + respuesta.status);
+    }
+
+    const contenido = await respuesta.json();
+
+    if (!contenido || typeof contenido.ok !== 'boolean') {
+      throw new Error('Respuesta inesperada de Apps Script.');
+    }
+
+    return contenido;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Se agotó el tiempo de espera. Intenta nuevamente.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(espera);
+  }
+}
+
+async function consultarSesion() {
+  const respuesta = await solicitar({
+    accion: 'consultar',
+    token: tokenSesion
+  });
+
+  if (!respuesta.ok) {
+    tokenSesion = '';
+    mostrarIngreso();
+    throw new Error(respuesta.mensaje);
+  }
+
+  el('formulario').hidden = true;
+  el('sesion').hidden = false;
+  el('bienvenida').textContent = 'Bienvenida, ' + respuesta.usuario;
+  mensaje(respuesta.mensaje);
+}
+
+el('formulario').addEventListener('submit', async evento => {
+  evento.preventDefault();
+  ocupado(true);
+  mensaje('Comprobando acceso…');
+
+  try {
+    const respuesta = await solicitar({
+      accion: 'ingresar',
+      usuario: el('usuario').value.trim(),
+      clave: el('clave').value
+    });
+
+    if (!respuesta.ok) {
+      throw new Error(respuesta.mensaje);
+    }
+
+    if (typeof respuesta.token !== 'string' ||
+        respuesta.token.length !== 72) {
+      throw new Error('No se recibió una sesión válida.');
+    }
+
+    tokenSesion = respuesta.token;
+    el('clave').value = '';
+    mensaje('Validando sesión…');
+    await consultarSesion();
+
+  } catch (error) {
+    tokenSesion = '';
+    mostrarIngreso();
+    mensaje(error.message);
+  } finally {
+    ocupado(false);
+  }
+});
+
+el('consultar').addEventListener('click', async () => {
+  ocupado(true);
+  mensaje('Consultando…');
+
+  try {
+    await consultarSesion();
+  } catch (error) {
+    mensaje(error.message);
+  } finally {
+    ocupado(false);
+  }
+});
+
+el('salir').addEventListener('click', async () => {
+  ocupado(true);
+  mensaje('Cerrando sesión…');
+
+  try {
+    const respuesta = await solicitar({
+      accion: 'salir',
+      token: tokenSesion
+    });
+
+    tokenSesion = '';
+    mostrarIngreso();
+    mensaje(respuesta.ok ? 'Sesión cerrada.' : respuesta.mensaje);
+  } catch (error) {
+    mensaje('No se confirmó el cierre de sesión: ' + error.message);
+  } finally {
+    ocupado(false);
+  }
+});
+</script>
+</body>
+</html>
