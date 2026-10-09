@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Radar Laive · Prueba de conexión</title>
+  <style>
+    body {
+      background: #101720; color: #eef3f5;
+      font-family: Arial; max-width: 600px;
+      margin: 80px auto; padding: 24px;
+    }
+    button {
+      background: #00c5ce; border: 0; border-radius: 10px;
+      padding: 14px 22px; cursor: pointer;
+    }
+    #resultado { line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <h1>Radar Laive</h1>
+  <p>Prueba de comunicación entre GitHub y Apps Script.</p>
+  <button id="probar">Probar conexión</button>
+  <p id="resultado" role="status"></p>
+
+  <script>
+    const url = 'https://script.google.com/macros/s/AKfycby5S9Jtrk_vlBlZUnF5_eq3G7_F1od0KatoK6fxGzfX93cmSSlpzitM_ogBsLOLW-ibFg/exec';
+    const boton = document.getElementById('probar');
+    const resultado = document.getElementById('resultado');
+
+    boton.addEventListener('click', async () => {
+      boton.disabled = true;
+      resultado.textContent = 'Comprobando…';
+      const control = new AbortController();
+      const espera = setTimeout(() => control.abort(), 20000);
+
+      try {
+        const respuesta = await fetch(url, {
+          credentials: 'omit',
+          signal: control.signal
+        });
+
+        if (!respuesta.ok) {
+          throw new Error('Respuesta HTTP ' + respuesta.status);
+        }
+
+        const datos = await respuesta.json();
+        if (datos.ok !== true ||
+            datos.mensaje !== 'Conexión de prueba disponible') {
+          throw new Error('La respuesta no corresponde a esta prueba.');
+        }
+
+        resultado.textContent =
+          'Conexión correcta: GitHub recibió y leyó la respuesta de Apps Script.';
+      } catch (error) {
+        resultado.textContent =
+          'La prueba no se completó: ' + error.message;
+      } finally {
+        clearTimeout(espera);
+        boton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
