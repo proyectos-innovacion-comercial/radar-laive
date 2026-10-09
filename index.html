@@ -1072,14 +1072,14 @@ body.radar-sin-sesion #root,body.radar-sin-sesion .skip-link{display:none!import
 <label for="radar-clave">Contraseña</label><input id="radar-clave" type="password" autocomplete="current-password" required maxlength="200">
 <button id="radar-entrar" type="submit">Ingresar</button>
 <p id="radar-acceso-mensaje" role="status" aria-live="polite"></p>
-<p>Vista previa E03 · Datos ficticios · OneDrive pendiente.</p>
+<p>E03 · Consulta del Excel institucional · Acceso de prueba.</p>
 </form></section>
 <button id="radar-cerrar" type="button" hidden>Cerrar sesión</button>
 <script>
 window.RadarAcceso = (() => {
-  const URL_API = 'https://script.google.com/macros/s/AKfycby5S9Jtrk_vlBlZUnF5_eq3G7_F1od0KatoK6fxGzfX93cmSSlpzitM_ogBsLOLW-ibFg/exec';
+  const URL_API = 'https://script.google.com/macros/s/AKfycbwr5oJScjmsiP5fFz4dheXQq9Z8lD4dtMPUchGbIcc7-WOBeXVJGLl1M3L7UFE6MS8/exec';
   const el = id => document.getElementById(id);
-  let token = '', usuario = '', resolver, comprobando = false;
+  let token = '', usuario = '', resolver, comprobando = false, generacion = 0;
   const listo = new Promise(resolve => { resolver = resolve; });
   const mensaje = texto => { el('radar-acceso-mensaje').textContent = texto; };
   async function solicitud(datos) {
@@ -1097,7 +1097,8 @@ window.RadarAcceso = (() => {
     } finally { clearTimeout(temporizador); }
   }
   function bloquear(texto) {
-    token = ''; usuario = '';
+    token = ''; usuario = ''; generacion++;
+    window.dispatchEvent(new Event('radar:salida'));
     document.body.classList.add('radar-sin-sesion');
     el('radar-ingreso').hidden = false; el('radar-cerrar').hidden = true;
     mensaje(texto); el('radar-clave').value = '';
@@ -1117,7 +1118,7 @@ window.RadarAcceso = (() => {
       if(typeof d.token !== 'string' || d.token.length !== 72) throw new Error('Sesión inválida.');
       token=d.token; const sesion=await validar(); usuario=sesion.usuario;
       el('radar-clave').value=''; el('radar-ingreso').hidden=true; el('radar-cerrar').hidden=false;
-      document.body.classList.remove('radar-sin-sesion'); mensaje(''); resolver();
+      document.body.classList.remove('radar-sin-sesion'); mensaje(''); resolver(); window.dispatchEvent(new Event('radar:ingreso'));
     } catch(e) { bloquear(e.message); }
     finally { el('radar-entrar').disabled=false; }
   });
@@ -1136,11 +1137,20 @@ window.RadarAcceso = (() => {
     try { await validar(); } catch(e) { bloquear('Vuelve a ingresar para validar tu sesión.'); }
     finally { comprobando=false; }
   },60000);
-  return Object.freeze({listo,validar});
+  async function registros() {
+    if (!token) throw new Error('Debes iniciar sesión.');
+    const actual = generacion, tokenActual = token;
+    const d = await solicitud({accion:'registros',token:tokenActual});
+    if (actual !== generacion || tokenActual !== token) throw new Error('La sesión cambió.');
+    if (!d.ok) throw new Error(d.mensaje || 'No se pudo consultar el Excel.');
+    if (!Array.isArray(d.registros)) throw new Error('Respuesta de registros incorrecta.');
+    return d.registros;
+  }
+  return Object.freeze({listo,validar,registros,activa:()=>!!token});
 })();
 </script>
 
-<div style="position:fixed;bottom:12px;left:12px;z-index:99999;background:#08334c;color:white;padding:10px 16px;border:1px solid #00cad2;border-radius:10px;font:13px sans-serif;max-width:90vw">E03 · Vista previa con datos ficticios · Guardado pendiente de conexión</div>
+<div style="position:fixed;bottom:12px;left:12px;z-index:99999;background:#08334c;color:white;padding:10px 16px;border:1px solid #00cad2;border-radius:10px;font:13px sans-serif;max-width:90vw">E03 · Excel en OneDrive · Solo lectura · Fotos pendientes de migración</div>
   <a class="skip-link" href="#main">Saltar al contenido</a>
 
   <!-- Punto de montaje de la aplicación -->
@@ -1249,13 +1259,13 @@ const CONFIG = {
      EDICIÓN EN LÍNEA desde la ficha del hallazgo
   -------------------------------------------------------------- */
   edicion: {
-    habilitada: true,
+    habilitada: false,
     autoguardadoMs: 900,      // espera tras la última tecla antes de sincronizar
     reintentoMs: 4000
   },
 
   portada: {
-    habilitada: true,
+    habilitada: false,
     anchoSalida: 1600,          // 1600 x 900 = 16:9
     altoSalida: 900,
     calidadJpeg: 0.82,
@@ -2413,32 +2423,11 @@ function finalizar(data) {
  * @param {{forzar?:boolean}} opts
  */
 async function cargarDataset(opts = {}) {
-  await window.RadarAcceso.validar();
-  estadoFuente.origen = "demo";
-  estadoFuente.ultimaSync = new Date();
-  return construirDataset([{"ID": "DEMO-001", "Marca": "Marca demo A", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Promoción", "Título": "Promoción de ejemplo en tienda", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-08-05", "Canal": "Supermercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-002", "Marca": "Marca demo B", "Categoría": "Cárnicos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Degustación", "Título": "Degustación de producto de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-08-06", "Canal": "Mercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-003", "Marca": "Marca demo C", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Lanzamiento", "Título": "Lanzamiento de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-08-07", "Canal": "Redes sociales", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-004", "Marca": "Marca demo A", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Promoción", "Título": "Promoción de ejemplo en tienda", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-09-08", "Canal": "Supermercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-005", "Marca": "Marca demo B", "Categoría": "Cárnicos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Degustación", "Título": "Degustación de producto de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-09-09", "Canal": "Mercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-006", "Marca": "Marca demo C", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Lanzamiento", "Título": "Lanzamiento de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-09-10", "Canal": "Redes sociales", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-007", "Marca": "Marca demo A", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Promoción", "Título": "Promoción de ejemplo en tienda", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-10-11", "Canal": "Supermercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-008", "Marca": "Marca demo B", "Categoría": "Cárnicos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Degustación", "Título": "Degustación de producto de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-10-12", "Canal": "Mercados", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}, {"ID": "DEMO-009", "Marca": "Marca demo C", "Categoría": "Lácteos", "Subcategoría": "Producto de ejemplo", "Tipo de acción": "Lanzamiento", "Título": "Lanzamiento de ejemplo", "Resumen": "Registro ficticio para probar el diseño y los filtros del radar.", "Descripción": "Esta acción es una muestra de demostración. No representa una investigación real ni información del área comercial.", "Fecha": "2026-10-13", "Canal": "Redes sociales", "Ubicación": "Perú", "Fuente": "Demostración", "Estado": "Demo", "Insight": "Texto de ejemplo para comprobar la visualización."}]);
-
-  if (!opts.forzar) {
-    const c = leerCache();
-    if (c) {
-      estadoFuente.origen = "cache";
-      estadoFuente.ultimaSync = new Date(cacheMem.ts);
-      log("dataset desde caché");
-      return finalizar(c);
-    }
-  }
-
-  if (!apiConfigurada()) throw new Error("API_NO_CONFIGURADA");
-
-  const payload = await get({ action: "list" });
-  const data = desempaquetar(payload);
-  const filas = Array.isArray(data) ? data : (data.rows || data.data || []);
-  const cfg = (data && data.config) || (payload && payload.config) || {};
-  const ds = construirDataset(filas, cfg);
-  estadoFuente.origen = "sheets";
+  const filas = await window.RadarAcceso.registros();
+  const ds = filas.length ? construirDataset(filas) : finalizar({actions:[],brands:{},months:[],categorias:[],currentMonth:''});
+  estadoFuente.origen = "onedrive";
   estadoFuente.ultimaSync = new Date();
   estadoFuente.error = null;
-  guardarCache(ds);
   return ds;
 }
 
@@ -2833,11 +2822,11 @@ function Nav(ctx) {
       navLinks,
       h("div", { class: "nav-right" },
         h("div", { class: "month-pill", title: "Última sincronización" },
-          h("span", { class: "dot" + (ctx.origen === "sheets" ? " vivo" : "") }),
+          h("span", { class: "dot" + (ctx.origen === "onedrive" ? " vivo" : "") }),
           String((V && V.months[0] && V.months[0].year) || new Date().getFullYear())
         ),
         h("button", {
-          class: "icon-btn", "aria-label": "Sincronizar con Google Sheets", title: "Sincronizar",
+          class: "icon-btn", "aria-label": "Actualizar desde OneDrive", title: "Sincronizar",
           onclick: () => ctx.sincronizar()
         }, I("sync", 18)),
         h("button", {
@@ -3551,7 +3540,7 @@ function Detail(action, ctx) {
     .filter(x => x.id !== action.id && (x.marca === action.marca || x.tipo === action.tipo))
     .slice(0, 3);
 
-  const indicador = h("span", { class: "save-state", "aria-live": "polite", "data-estado": "limpio", text: "Conexión pendiente" });
+  const indicador = h("span", { class: "save-state", "aria-live": "polite", "data-estado": "limpio", text: "Solo lectura" });
   const auto = crearAutoguardado(action, indicador);
 
   const campo = (nodo, clave, etiqueta, opts = {}) => editable(nodo, {
@@ -3595,7 +3584,7 @@ function Detail(action, ctx) {
     heroCaja,
     h("div", { class: "detail-pad" },
       h("div", { class: "detail-barra" },
-        h("span", { class: "eyebrow", text: "Ficha editable · conexión a OneDrive pendiente" }),
+        h("span", { class: "eyebrow", text: "Ficha del hallazgo · Solo lectura" }),
         indicador,
         CONFIG.portada.habilitada ? btnPortada : null
       ),
@@ -4324,10 +4313,10 @@ async function sincronizar(forzar) {
     }
     estado.cargando = false;
     aplicarHash();
-    API.cargarCapacidades();
+    // Edición y carga de fotos desactivadas en esta fase de lectura.
     if (radarActivo) radarActivo.emitirOnda();
     if (forzar) {
-      UI.toast(`Demo · ${V.actions.length} registros ficticios`, "ok");
+      UI.toast(`OneDrive · ${V.actions.length} registros aprobados`, "ok");
     }
   } catch (err) {
     if (miSync !== syncSeq) return;
@@ -4348,14 +4337,37 @@ function mensajeError(err) {
   if (/HTTP 40|HTTP 50/.test(c)) return `El Web App respondió ${c}. Verifica que esté desplegado con acceso "Cualquier persona".`;
   if (c === "RESPUESTA_INVALIDA") return "El Web App no devolvió JSON. Verifica que esté desplegado con acceso \"Cualquier persona\" y reintenta.";
   if (c === "SHEET_NOT_FOUND") return "No existe la hoja indicada. Revisa la propiedad SHEET_NAME del Apps Script.";
-  return "Verifica la URL del Web App de Apps Script y que la hoja esté publicada.";
+  return c || "No se pudo consultar el Excel. Revisa la conexión y vuelve a actualizar.";
 }
 
 /* ============================================================
    Arranque
    ============================================================ */
+let iniciado = false;
+window.addEventListener('radar:salida', () => {
+  ++syncSeq;
+  cerrarDetalle();
+  liberarVista();
+  V = null;
+  UI.setDataset(API.finalizar({actions:[],brands:{},months:[],categorias:[]}));
+  estado.detalle = null;
+  estado.focusMonth = ''; estado.compareA = ''; estado.compareB = '';
+  estado.cargando = false; estado.error = null;
+  API.invalidarCache();
+  document.getElementById('root').replaceChildren();
+  vistaPintada = false;
+  Anim.barridoSync(false);
+});
+window.addEventListener('radar:ingreso', () => {
+  if (iniciado) sincronizar(true);
+});
+// Actualiza la lectura sin publicar de nuevo el HTML.
+setInterval(() => {
+  if (iniciado && window.RadarAcceso.activa() && !document.hidden && !estado.cargando) sincronizar(false);
+}, 300000);
 async function iniciar() {
   await window.RadarAcceso.listo;
+  iniciado = true;
   aplicarTema(temaInicial());
   Anim.init();
   window.addEventListener("hashchange", aplicarHash);
