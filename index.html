@@ -1095,6 +1095,13 @@ h1.editable, p.editable, span.editable { padding: 2px 6px; margin-left: -6px; }
 @media(max-width:820px){.hero .hero-grid{grid-template-columns:1fr;gap:26px}.hero.shell{padding:32px 24px}.detail-grid{grid-template-columns:1fr}.detail-sheet{width:calc(100% - 32px);margin:20px auto 72px}.detail-pad{padding:24px}.detail-hero{height:200px}}
 @media(max-width:480px){.hero h1{font-size:36px}.detail-sheet{width:calc(100% - 20px);border-radius:16px}.detail-pad{padding:20px 16px}.detail-hero{height:170px}.news-information{padding:20px}.news-information .spec{grid-template-columns:90px minmax(0,1fr);gap:12px}.detail-close{width:36px;height:36px;top:10px;right:10px}}
 
+
+/* Formulario Nueva acción */
+.captura-panel{width:min(720px,calc(100vw - 32px));max-height:calc(100dvh - 120px);padding:26px;overflow-y:auto;z-index:220}
+.fab-captura{bottom:82px}
+.captura-grid .campo input,.captura-grid .campo textarea{width:100%;box-sizing:border-box}
+.captura-panel .captura-nota{white-space:pre-line;overflow-wrap:anywhere}
+@media(max-width:560px){.captura-panel{width:calc(100vw - 24px);padding:20px}.fab-captura span{display:inline}.captura-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body class="radar-sin-sesion">
@@ -1206,11 +1213,12 @@ window.RadarAcceso = (() => {
   }
   return Object.freeze({listo,validar,registros,activa:()=>!!token,
     prepararPortada:id=>portada('prepararPortada',{id}),
-    guardarPortada:datos=>portada('guardarPortada',datos)});
+    guardarPortada:datos=>portada('guardarPortada',datos),
+    crearAccion:datos=>portada('crearAccion',datos)});
 })();
 </script>
 
-<div style="position:fixed;bottom:12px;left:12px;z-index:99999;background:#08334c;color:white;padding:10px 16px;border:1px solid #00cad2;border-radius:10px;font:13px sans-serif;max-width:90vw">OneDrive conectado · Datos en consulta · Portadas editables</div>
+<div style="position:fixed;bottom:12px;left:12px;z-index:99999;background:#08334c;color:white;padding:10px 16px;border:1px solid #00cad2;border-radius:10px;font:13px sans-serif;max-width:90vw">OneDrive conectado · Registro de acciones y portadas</div>
   <a class="skip-link" href="#main">Saltar al contenido</a>
 
   <!-- Punto de montaje de la aplicación -->
@@ -1342,7 +1350,7 @@ const CONFIG = {
      sessionStorage hasta cerrar la pestaña.
   -------------------------------------------------------------- */
   captura: {
-    habilitada: false,
+    habilitada: true,
     permiteEditar: false,
     permiteEliminar: false
   },
@@ -4009,109 +4017,76 @@ const guardarToken = t => API.guardarTokenEscritura(t);
  * @param {Function} alGuardar  callback para re-sincronizar
  */
 function montarCaptura(ctx, alGuardar) {
-  const panel = h("section", {
-    class: "captura-panel", id: "captura", "aria-hidden": "true", "aria-label": "Registrar hallazgo"
+  let guardando = false;
+  const solicitudId = crypto.randomUUID();
+  const campos = {};
+  const panel = h('section', {class:'captura-panel', id:'captura', 'aria-hidden':'true', 'aria-label':'Nueva acción'});
+  const boton = h('button', {class:'fab-captura', 'aria-controls':'captura', 'aria-expanded':'false', onclick:()=>alternar(true)}, I('spark',18,true), h('span',{text:'Nueva acción'}));
+  function alternar(abierto) {
+    if (guardando) return;
+    panel.setAttribute('aria-hidden',String(!abierto)); panel.classList.toggle('abierto',abierto); boton.setAttribute('aria-expanded',String(abierto));
+    if (abierto) campos.Marca.focus();
+  }
+  const aviso = h('p',{class:'captura-nota',role:'status','aria-live':'polite'});
+  const requeridos = new Set(['Marca','Categoría','Tipo de acción','Título','Fecha','Resumen']);
+  const largos = new Set(['Descripción','Resumen','Insight']);
+  const limites = {'Marca':200,'Grupo':200,'Categoría':200,'Subcategoría':200,'Tipo de acción':200,'Título':500,'Fecha':10,'Resumen':3000,'Descripción':8000,'Insight':4000,'SKU involucrado':500,'Canal':500,'Ubicación':500,'Fuente':500,'Link de referencia':2000};
+  const nombres = ['Marca','Grupo','Categoría','Subcategoría','Tipo de acción','Título','Fecha','Canal','Ubicación','SKU involucrado','Descripción','Resumen','Insight','Fuente','Link de referencia'];
+  const grid = h('div',{class:'captura-grid'}, ...nombres.map(nombre=>{
+    const id='alta-'+nombres.indexOf(nombre);
+    const etiqueta=nombre==='Resumen'?'Hallazgo':nombre==='Insight'?'Insight / estrategia para Laive':nombre;
+    const control=largos.has(nombre)?h('textarea',{id,rows:3,name:nombre,maxlength:limites[nombre]}):h('input',{id,name:nombre,type:nombre==='Fecha'?'date':nombre==='Link de referencia'?'url':'text',maxlength:limites[nombre]});
+    control.required=requeridos.has(nombre);campos[nombre]=control;
+    return h('label',{class:'campo'+(largos.has(nombre)||nombre==='Título'?' ancho':''),for:id},h('span',{class:'eyebrow',text:etiqueta+(control.required?' *':'')}),control);
+  }));
+  // Fecha local de Lima, sin desplazar el día por UTC.
+  campos.Fecha.value=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const foto=h('input',{type:'file',accept:'image/jpeg,image/png,image/webp',id:'alta-foto'});
+  const preview=h('img',{alt:'Vista previa de la portada',hidden:true,style:{maxWidth:'100%',maxHeight:'140px',objectFit:'contain',borderRadius:'10px'}});
+  let previewUrl='';
+  foto.addEventListener('change',()=>{if(previewUrl)URL.revokeObjectURL(previewUrl);const f=foto.files[0];preview.hidden=!f;if(f){previewUrl=URL.createObjectURL(f);preview.src=previewUrl;}});
+  const guardar=h('button',{class:'btn',type:'submit',text:'Guardar acción'});
+  const form=h('form',{},grid,h('label',{class:'campo',for:'alta-foto'},h('span',{class:'eyebrow',text:'Foto de portada · opcional'}),foto),preview,aviso,h('div',{class:'captura-pie'},guardar));
+  async function procesarFoto(f) {
+    if (!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>12*1048576) throw new Error('Usa una foto JPG, PNG o WEBP de hasta 12 MB.');
+    const u=URL.createObjectURL(f);
+    try {
+      const img=new Image();img.src=u;await img.decode();
+      const escala=Math.min(1,1600/img.naturalWidth,1600/img.naturalHeight);
+      const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.naturalWidth*escala));canvas.height=Math.max(1,Math.round(img.naturalHeight*escala));
+      const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,canvas.width,canvas.height);c.drawImage(img,0,0,canvas.width,canvas.height);
+      const b=canvas.toDataURL('image/jpeg',.82).split(',')[1];
+      if(b.length>4194304)throw new Error('La foto procesada supera 3 MB. Usa una imagen más pequeña.');
+      return b;
+    } finally {URL.revokeObjectURL(u);}
+  }
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();if(guardando||!form.reportValidity())return;
+    guardando=true;guardar.disabled=true;aviso.textContent='Validando datos…';
+    Array.from(form.elements).forEach(x=>x.disabled=true);
+    let creada=null;
+    try {
+      const f=foto.files[0]; const imagen=f?await procesarFoto(f):null;
+      const datos={};Object.entries(campos).forEach(([k,v])=>datos[k]=v.value.trim());
+      aviso.textContent='Registrando la acción en el Excel institucional…';
+      creada=await window.RadarAcceso.crearAccion({solicitudId,campos:datos});
+      let mensaje='Acción creada: '+creada.id;
+      if(imagen){
+        aviso.textContent='Acción registrada. Guardando la portada…';
+        try { const r=await window.RadarAcceso.guardarPortada({id:creada.id,mimeType:'image/jpeg',dataBase64:imagen});mensaje+=' · '+r.mensaje; }
+        catch(err){mensaje+=' · No se confirmó la foto. Revisa la ficha y completa la portada desde allí.';}
+      }
+      guardando=false;alternar(false);toast(mensaje,'ok');
+      if(previewUrl)URL.revokeObjectURL(previewUrl);
+      if(typeof alGuardar==='function')await alGuardar(creada.id);
+    } catch(err){
+      aviso.textContent=(err&&err.message)||'No se pudo confirmar el registro. Reintenta en este formulario.';
+    } finally {guardando=false;Array.from(form.elements).forEach(x=>x.disabled=false);}
   });
-
-  const boton = h("button", {
-    class: "fab-captura", "aria-controls": "captura", "aria-expanded": "false",
-    title: "Registrar hallazgo",
-    onclick: () => alternar()
-  }, I("spark", 18, true), h("span", { text: "Registrar hallazgo" }));
-
-  function alternar(forzar) {
-    const abierto = forzar !== undefined ? forzar : panel.getAttribute("aria-hidden") === "true";
-    panel.setAttribute("aria-hidden", String(!abierto));
-    boton.setAttribute("aria-expanded", String(abierto));
-    panel.classList.toggle("abierto", abierto);
-    if (abierto) {
-      pintarFormulario();
-      const primero = panel.querySelector("input, textarea");
-      if (primero) primero.focus();
-    }
-  }
-
-  function pintarFormulario() {
-    if (panel.dataset.listo === "1") return;
-    panel.dataset.listo = "1";
-
-    const campos = {};
-    const errores = h("ul", { class: "captura-errores", role: "alert" });
-
-    const grid = h("div", { class: "captura-grid" },
-      ...COLUMNAS_COMERCIALES.map(nombre => {
-        const id = "cap-" + nombre.replace(/\s+/g, "-").toLowerCase();
-        const control = CAMPOS_LARGOS.has(nombre)
-          ? h("textarea", { id, rows: nombre === "Descripción" ? 5 : 3, name: nombre })
-          : h("input", { id, type: "text", name: nombre });
-        campos[nombre] = control;
-        return h("label", { class: "campo" + (CAMPOS_LARGOS.has(nombre) ? " ancho" : ""), for: id },
-          h("span", { class: "eyebrow", text: nombre }), control);
-      }),
-      ...["Marca", "Grupo", "Fecha"].map(nombre => {
-        const id = "cap-" + nombre.toLowerCase();
-        const control = h("input", { id, type: nombre === "Fecha" ? "date" : "text", name: nombre });
-        campos[nombre] = control;
-        return h("label", { class: "campo", for: id },
-          h("span", { class: "eyebrow", text: nombre }), control);
-      })
-    );
-
-    const inputToken = h("input", {
-      id: "cap-token", type: "password", autocomplete: "off",
-      placeholder: "Token de escritura", value: tokenGuardado()
-    });
-
-    const btnGuardar = h("button", { class: "btn", type: "button" }, "Guardar en Google Sheets ", I("arrow", 15));
-
-    btnGuardar.addEventListener("click", async () => {
-      errores.textContent = "";
-      const bruto = {};
-      Object.entries(campos).forEach(([k, el]) => (bruto[k] = el.value));
-
-      const { valido, errores: errs, limpio } = validarRegistro(bruto);
-      if (!valido) {
-        errs.forEach(e => errores.appendChild(h("li", { text: e.mensaje })));
-        toast("Revisa los campos marcados", "error");
-        return;
-      }
-      const token = inputToken.value.trim();
-      if (!token) { toast("Falta el token de escritura", "error"); return; }
-
-      btnGuardar.disabled = true;
-      btnGuardar.classList.add("cargando");
-      try {
-        await API.crearRegistro(limpio, token);
-        guardarToken(token);
-        Object.entries(campos).forEach(([, el]) => (el.value = ""));
-        toast("Registro creado en Google Sheets", "ok");
-        alternar(false);
-        if (typeof alGuardar === "function") alGuardar();
-      } catch (err) {
-        const detalle = (err && err.detalle) || (err && err.message) || "Error desconocido";
-        (err && err.errores || []).forEach(d => errores.appendChild(h("li", { text: String(d) })));
-        toast("No se pudo guardar: " + detalle, "error");
-      } finally {
-        btnGuardar.disabled = false;
-        btnGuardar.classList.remove("cargando");
-      }
-    });
-
-    panel.appendChild(h("div", { class: "captura-head" },
-      h("h3", { text: "Registrar hallazgo" }),
-      h("button", { class: "icon-btn", "aria-label": "Cerrar", onclick: () => alternar(false) }, I("close", 18))
-    ));
-    panel.appendChild(h("p", { class: "captura-nota", text: "Los campos obligatorios son Categoría, Tipo de acción, Título y Resumen. La fila se agrega al final de la hoja con estado Publicado." }));
-    panel.appendChild(errores);
-    panel.appendChild(grid);
-    panel.appendChild(h("div", { class: "captura-pie" },
-      h("label", { class: "campo", for: "cap-token" },
-        h("span", { class: "eyebrow", text: "Token de escritura" }), inputToken),
-      btnGuardar
-    ));
-  }
-
-  return h("div", { class: "captura-wrap" }, boton, panel);
+  panel.appendChild(h('div',{class:'captura-head'},h('h3',{text:'Nueva acción'}),h('button',{class:'icon-btn','aria-label':'Cerrar',onclick:()=>alternar(false)},I('close',18))));
+  panel.appendChild(h('p',{class:'captura-nota',text:'Completa los campos con *. El código se genera automáticamente. Tu registro se publicará como Aprobado. La foto conserva su proporción.'}));
+  panel.appendChild(form);
+  return h('div',{class:'captura-wrap'},boton,panel);
 }
 
 return { montarCaptura };
@@ -4300,7 +4275,7 @@ function render() {
     main.appendChild(vista);
     Anim.transicionVista(vista);
     app.appendChild(UI.Footer());
-    if (CONFIG.captura.habilitada) app.appendChild(montarCaptura(ctx, () => sincronizar(true)));
+    if (CONFIG.captura.habilitada) app.appendChild(montarCaptura(ctx, async id => { await sincronizar(true); if (id && V.actions.some(a => a.id === id)) { estado.detalle = V.actions.find(a => a.id === id); location.hash = "#/accion/" + encodeURIComponent(id); renderDetalle(); } }));
   }
 
   cont.appendChild(app);
