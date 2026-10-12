@@ -3890,7 +3890,7 @@ function abrirEditorPortada(action, alGuardar) {
       }
       guardando = false;
       cerrar();
-      toast(res.url ? "Portada guardada en OneDrive" : "Foto guardada. Pulsa actualizar para verla.", "ok");
+      toast(res.mensaje || "Portada guardada en OneDrive", "ok");
     } catch (err) {
       guardando = false;
       aviso.dataset.tipo = "error";
