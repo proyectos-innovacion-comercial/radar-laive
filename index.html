@@ -1102,6 +1102,20 @@ h1.editable, p.editable, span.editable { padding: 2px 6px; margin-left: -6px; }
 .captura-grid .campo input,.captura-grid .campo textarea{width:100%;box-sizing:border-box}
 .captura-panel .captura-nota{white-space:pre-line;overflow-wrap:anywhere}
 @media(max-width:560px){.captura-panel{width:calc(100vw - 24px);padding:20px}.fab-captura span{display:inline}.captura-grid{grid-template-columns:1fr}}
+
+/* Alta centrada con fondo modal y controles de selección. */
+.alta-fondo{position:fixed;inset:0;z-index:240;background:#07131a99;backdrop-filter:blur(5px)}
+.alta-fondo[hidden]{display:none}
+.captura-panel{left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-46%);width:min(820px,calc(100vw - 48px));max-height:calc(100dvh - 64px);border:1px solid var(--line);border-radius:20px;padding:28px 32px;opacity:0;visibility:hidden;transition:opacity .2s,transform .2s;z-index:250}
+.captura-panel.abierto{transform:translate(-50%,-50%);opacity:1;visibility:visible}
+.captura-head h3{font:700 26px var(--sans);letter-spacing:-.6px}
+.captura-grid{gap:18px 22px}.captura-grid .eyebrow{font:600 11px var(--sans);letter-spacing:.8px}
+.captura-grid select{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--paper);color:var(--ink);font:14px var(--sans)}
+.captura-grid input,.captura-grid textarea{font-size:14px;padding:10px 12px}
+.captura-grid select:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.captura-grid label>input[hidden]{display:none}.captura-grid select+input{margin-top:8px}
+.captura-pie{justify-content:flex-end;padding-top:18px;border-top:1px solid var(--line)}
+@media(max-width:560px){.captura-panel{width:calc(100vw - 24px);padding:22px 18px;max-height:calc(100dvh - 24px)}.captura-grid{grid-template-columns:1fr}.captura-panel .captura-head h3{font-size:23px}}
 </style>
 </head>
 <body class="radar-sin-sesion">
@@ -4020,12 +4034,19 @@ function montarCaptura(ctx, alGuardar) {
   let guardando = false;
   const solicitudId = crypto.randomUUID();
   const campos = {};
-  const panel = h('section', {class:'captura-panel', id:'captura', 'aria-hidden':'true', 'aria-label':'Nueva acción'});
+  const otros = {};
+  const acciones = (__M_ui.dataset() && __M_ui.dataset().actions) || [];
+  const propiedades = {'Marca':'marca','Grupo':'grupo','Categoría':'categoria','Subcategoría':'subcategoria','Tipo de acción':'tipo','Canal':'canal','Fuente':'fuente'};
+  const fondo = h('div',{class:'alta-fondo',hidden:true});
+  let overflowAnterior='';
+  const panel = h('section', {class:'captura-panel', id:'captura', 'aria-hidden':'true', 'aria-label':'Nueva acción',role:'dialog','aria-modal':'true'});
   const boton = h('button', {class:'fab-captura', 'aria-controls':'captura', 'aria-expanded':'false', onclick:()=>alternar(true)}, I('spark',18,true), h('span',{text:'Nueva acción'}));
   function alternar(abierto) {
     if (guardando) return;
     panel.setAttribute('aria-hidden',String(!abierto)); panel.classList.toggle('abierto',abierto); boton.setAttribute('aria-expanded',String(abierto));
-    if (abierto) campos.Marca.focus();
+    fondo.hidden=!abierto;
+    if(abierto){overflowAnterior=document.body.style.overflow;document.body.style.overflow='hidden';campos.Marca.focus();}
+    else{document.body.style.overflow=overflowAnterior;boton.focus();}
   }
   const aviso = h('p',{class:'captura-nota',role:'status','aria-live':'polite'});
   const requeridos = new Set(['Marca','Categoría','Tipo de acción','Título','Fecha','Resumen']);
@@ -4035,9 +4056,20 @@ function montarCaptura(ctx, alGuardar) {
   const grid = h('div',{class:'captura-grid'}, ...nombres.map(nombre=>{
     const id='alta-'+nombres.indexOf(nombre);
     const etiqueta=nombre==='Resumen'?'Hallazgo':nombre==='Insight'?'Insight / estrategia para Laive':nombre;
-    const control=largos.has(nombre)?h('textarea',{id,rows:3,name:nombre,maxlength:limites[nombre]}):h('input',{id,name:nombre,type:nombre==='Fecha'?'date':nombre==='Link de referencia'?'url':'text',maxlength:limites[nombre]});
+    let control;
+    let otro=null;
+    if(propiedades[nombre]){
+      const opciones=[...new Set(acciones.flatMap(a=>Array.isArray(a[propiedades[nombre]])?a[propiedades[nombre]]:[a[propiedades[nombre]]]).map(v=>String(v||'').trim()).filter(v=>v&&v!=='—'))].sort((a,b)=>a.localeCompare(b,'es'));
+      control=h('select',{id,name:nombre},h('option',{value:'',text:'Selecciona una opción'}),...opciones.map(v=>h('option',{value:v,text:v})),h('option',{value:'__OTRA__',text:'Otra opción…'}));
+      otro=h('input',{type:'text',maxlength:limites[nombre],placeholder:'Escribe la nueva opción','aria-label':'Otra opción para '+etiqueta,hidden:true});
+      otros[nombre]=otro;
+      control.addEventListener('change',()=>{const activo=control.value==='__OTRA__';otro.hidden=!activo;otro.required=activo;if(activo)otro.focus();});
+    }else{
+      control=largos.has(nombre)?h('textarea',{id,rows:3,name:nombre,maxlength:limites[nombre]}):h('input',{id,name:nombre,type:nombre==='Fecha'?'date':nombre==='Link de referencia'?'url':'text',maxlength:limites[nombre]});
+    }
     control.required=requeridos.has(nombre);campos[nombre]=control;
-    return h('label',{class:'campo'+(largos.has(nombre)||nombre==='Título'?' ancho':''),for:id},h('span',{class:'eyebrow',text:etiqueta+(control.required?' *':'')}),control);
+    return h('label',{class:'campo'+(largos.has(nombre)||nombre==='Título'?' ancho':''),for:id},h('span',{class:'eyebrow',text:etiqueta+(control.required?' *':'')}),control,otro);
+
   }));
   // Fecha local de Lima, sin desplazar el día por UTC.
   campos.Fecha.value=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -4067,7 +4099,7 @@ function montarCaptura(ctx, alGuardar) {
     let creada=null;
     try {
       const f=foto.files[0]; const imagen=f?await procesarFoto(f):null;
-      const datos={};Object.entries(campos).forEach(([k,v])=>datos[k]=v.value.trim());
+      const datos={};Object.entries(campos).forEach(([k,v])=>datos[k]=(v.value==='__OTRA__'?otros[k].value:v.value).trim());
       aviso.textContent='Registrando la acción en el Excel institucional…';
       creada=await window.RadarAcceso.crearAccion({solicitudId,campos:datos});
       let mensaje='Acción creada: '+creada.id;
@@ -4086,7 +4118,23 @@ function montarCaptura(ctx, alGuardar) {
   panel.appendChild(h('div',{class:'captura-head'},h('h3',{text:'Nueva acción'}),h('button',{class:'icon-btn','aria-label':'Cerrar',onclick:()=>alternar(false)},I('close',18))));
   panel.appendChild(h('p',{class:'captura-nota',text:'Completa los campos con *. El código se genera automáticamente. Tu registro se publicará como Aprobado. La foto conserva su proporción.'}));
   panel.appendChild(form);
-  return h('div',{class:'captura-wrap'},boton,panel);
+  fondo.addEventListener('click',()=>alternar(false));
+  panel.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();alternar(false);}
+    if(e.key==='Tab'){
+      const lista=Array.from(panel.querySelectorAll('input,select,textarea,button')).filter(x=>!x.disabled&&!x.hidden&&x.getClientRects().length);
+      const primero=lista[0],ultimo=lista[lista.length-1];
+      if(e.shiftKey&&document.activeElement===primero){e.preventDefault();ultimo.focus();}
+      else if(!e.shiftKey&&document.activeElement===ultimo){e.preventDefault();primero.focus();}
+    }
+  });
+  campos['Categoría'].addEventListener('change',()=>{
+    const categoria=campos['Categoría'].value;
+    const opciones=[...new Set(acciones.filter(a=>!categoria||categoria==='__OTRA__'||a.categoria===categoria).map(a=>a.subcategoria).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+    campos['Subcategoría'].replaceChildren(h('option',{value:'',text:'Selecciona una opción'}),...opciones.map(v=>h('option',{value:v,text:v})),h('option',{value:'__OTRA__',text:'Otra opción…'}));
+    otros['Subcategoría'].hidden=true;otros['Subcategoría'].required=false;
+  });
+  return h('div',{class:'captura-wrap'},boton,fondo,panel);
 }
 
 return { montarCaptura };
