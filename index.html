@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Brandg · Radar Competitivo</title>
+  <title>Radar Laive · Inteligencia competitiva</title>
   <meta name="description" content="Repositorio de inteligencia competitiva: acciones, campañas, lanzamientos y movimientos de la competencia, monitoreados y archivados mes a mes.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#FAFAF8" media="(prefers-color-scheme: light)">
@@ -17,7 +17,7 @@
        ============================================================ -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Ccircle cx=%2232%22 cy=%2232%22 r=%2229%22 fill=%22%231E1E24%22/%3E%3Ccircle cx=%2232%22 cy=%2232%22 r=%2221%22 fill=%22none%22 stroke=%22%2300BDB5%22 stroke-width=%222%22 opacity=%22.35%22/%3E%3Ccircle cx=%2232%22 cy=%2232%22 r=%2213%22 fill=%22none%22 stroke=%22%2300BDB5%22 stroke-width=%222%22 opacity=%22.55%22/%3E%3Cline x1=%2232%22 y1=%2232%22 x2=%2251%22 y2=%2213%22 stroke=%22%2333CFC8%22 stroke-width=%223%22 stroke-linecap=%22round%22/%3E%3Ccircle cx=%2244%22 cy=%2222%22 r=%223.5%22 fill=%22%2300BDB5%22/%3E%3Ccircle cx=%2223%22 cy=%2238%22 r=%222.5%22 fill=%22%2300BDB5%22 opacity=%22.7%22/%3E%3C/svg%3E">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Brandg · Radar Competitivo">
+  <meta property="og:title" content="Radar Laive · Inteligencia competitiva">
   <meta property="og:description" content="Reporte vivo de acciones de la competencia.">
   <!-- Pendiente de configuración: sube og-cover.png y la URL de GitHub Pages
   <meta property="og:image" content="og-cover.png">
@@ -1045,7 +1045,33 @@ h1.editable, p.editable, span.editable { padding: 2px 6px; margin-left: -6px; }
 .portada-aviso[data-tipo="info"]  { color: var(--ink-2); }
 .portada-aviso[data-tipo="error"] { color: #B3261E; }
 
-  </style>
+  
+/* Ficha editorial Radar Laive: descripción, hallazgo y estrategia. */
+.radar-wordmark{font:700 30px var(--sans);letter-spacing:-1.4px;white-space:nowrap;color:var(--ink)}
+.radar-wordmark strong{color:var(--teal)}
+.detail-title{font-family:var(--sans);font-weight:750;line-height:1.18;letter-spacing:-.8px}
+.detail-grid{grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:30px;margin-top:30px;align-items:start}
+.news-content{display:grid;gap:24px;min-width:0}
+.news-label{font:700 12px var(--sans);letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-3);margin:0 0 14px}
+.news-content .detail-body{margin:0;white-space:pre-line;overflow-wrap:anywhere;line-height:1.8}
+.news-block{padding:24px;border-radius:16px;border-left:4px solid}
+.news-finding{background:#eaf1fb;border-color:#20559c}
+.news-finding .news-label{color:#20559c}
+.news-strategy{background:#e6f5ee;border-color:#18744b}
+.news-strategy .news-label{color:#18744b}
+.news-block .detail-body{color:#243342}
+.news-information{padding:26px;background:var(--paper-2);border:1px solid var(--line);border-radius:18px}
+.news-information .specs{margin:0}
+.news-information .spec{gap:18px}
+.news-information dd{text-align:right;overflow-wrap:anywhere}
+[data-theme="dark"] .news-finding{background:#182e48}
+[data-theme="dark"] .news-finding .news-label{color:#a5ccff}
+[data-theme="dark"] .news-strategy{background:#16392e}
+[data-theme="dark"] .news-strategy .news-label{color:#93dfb6}
+[data-theme="dark"] .news-block .detail-body{color:#e2eaf0}
+@media(max-width:820px){.detail-grid{grid-template-columns:1fr}.news-block,.news-information{padding:22px}.radar-wordmark{font-size:25px}}
+
+</style>
 </head>
 <body class="radar-sin-sesion">
 
@@ -1067,12 +1093,12 @@ body.radar-sin-sesion #root,body.radar-sin-sesion .skip-link{display:none!import
 <section id="radar-ingreso" aria-label="Ingreso al radar">
 <form id="radar-acceso-form">
 <h1>Radar <span>Laive</span></h1>
-<p>Ingresa con tus credenciales de prueba.</p>
+<p>Ingresa con tu usuario y contraseña.</p>
 <label for="radar-usuario">Usuario</label><input id="radar-usuario" autocomplete="username" required maxlength="100">
 <label for="radar-clave">Contraseña</label><input id="radar-clave" type="password" autocomplete="current-password" required maxlength="200">
 <button id="radar-entrar" type="submit">Ingresar</button>
 <p id="radar-acceso-mensaje" role="status" aria-live="polite"></p>
-<p>E03 · Consulta del Excel institucional · Acceso de prueba.</p>
+<p>Acceso al radar competitivo de Laive.</p>
 </form></section>
 <button id="radar-cerrar" type="button" hidden>Cerrar sesión</button>
 <script>
@@ -1150,7 +1176,7 @@ window.RadarAcceso = (() => {
 })();
 </script>
 
-<div style="position:fixed;bottom:12px;left:12px;z-index:99999;background:#08334c;color:white;padding:10px 16px;border:1px solid #00cad2;border-radius:10px;font:13px sans-serif;max-width:90vw">E03 · Excel en OneDrive · Solo lectura · Fotos pendientes de migración</div>
+<div style="position:fixed;bottom:12px;left:12px;z-index:99999;background:#08334c;color:white;padding:10px 16px;border:1px solid #00cad2;border-radius:10px;font:13px sans-serif;max-width:90vw">Excel y portadas en OneDrive · Solo lectura</div>
   <a class="skip-link" href="#main">Saltar al contenido</a>
 
   <!-- Punto de montaje de la aplicación -->
@@ -1238,7 +1264,7 @@ const CONFIG = {
        En el build modular apuntan a assets/images/. */
     logoUrl: (typeof window !== "undefined" && window.__BRANDG_LOGO__) || "assets/images/logo-brandg.png",
     logoUrlDark: (typeof window !== "undefined" && window.__BRANDG_LOGO_DARK__) || "assets/images/logo-brandg-dark.png",
-    nombre: "Brandg",
+    nombre: "Radar Laive",
     producto: "Radar Competitivo"
   },
 
@@ -2788,11 +2814,8 @@ function Nav(ctx) {
   ];
 
   const marca = h("div", { class: "brand-logo" },
-    h("img", { class: "logo-claro", src: CONFIG.marca.logoUrl, alt: CONFIG.marca.nombre,
-               width: "128", height: "36", decoding: "async" }),
-    h("img", { class: "logo-oscuro", src: CONFIG.marca.logoUrlDark, alt: "", "aria-hidden": "true",
-               width: "128", height: "36", decoding: "async" }),
-    h("span", { class: "brand-sub", text: "RADAR COMPETITIVO" })
+    h("span", { class: "radar-wordmark" }, "Radar ", h("strong", { text: "Laive" })),
+    h("span", { class: "brand-sub", text: "INTELIGENCIA COMPETITIVA" })
   );
 
   const navLinks = h("div", { class: "nav-links", id: "nav-links" },
@@ -3584,7 +3607,7 @@ function Detail(action, ctx) {
     heroCaja,
     h("div", { class: "detail-pad" },
       h("div", { class: "detail-barra" },
-        h("span", { class: "eyebrow", text: "Ficha del hallazgo · Solo lectura" }),
+        h("span", { class: "eyebrow", text: "RADAR LAIVE · FICHA DE LA ACCIÓN" }),
         indicador,
         CONFIG.portada.habilitada ? btnPortada : null
       ),
@@ -3598,14 +3621,31 @@ function Detail(action, ctx) {
         )
       ),
       campo(h("h1", { class: "detail-title" }), "titulo", "Título"),
-      campo(h("p", { class: "detail-lede" }), "resumen", "Resumen", { unaLinea: false }),
       h("div", { class: "detail-grid" },
-        h("div", {},
-          campo(h("p", { class: "detail-body" }), "descripcion", "Descripción",
-            { unaLinea: false, vacio: "" })
+        h("div", { class: "news-content" },
+          h("section", { class: "news-description" },
+            h("h2", { class: "news-label", text: "Descripción" }),
+            campo(h("p", { class: "detail-body" }), "descripcion", "Descripción",
+              { unaLinea: false, vacio: "Descripción pendiente de registro." })
+          ),
+          h("section", { class: "news-block news-finding" },
+            h("h2", { class: "news-label", text: "Hallazgo" }),
+            campo(h("p", { class: "detail-body" }), "resumen", "Hallazgo",
+              { unaLinea: false, vacio: "Hallazgo pendiente de registro." })
+          ),
+          h("section", { class: "news-block news-strategy" },
+            h("h2", { class: "news-label", text: "Insight / estrategia para Laive" }),
+            campo(h("p", { class: "detail-body" }), "insight", "Insight / estrategia",
+              { unaLinea: false, vacio: "Insight / estrategia pendiente de registro." })
+          )
         ),
-        h("aside", {},
+        h("aside", { class: "news-information" },
+          h("h2", { class: "news-label", text: "Información" }),
           h("dl", { class: "specs" },
+            spec("Código", h("span", { text: action.id })),
+            spec("Categoría", h("span", { text: action.categoria })),
+            spec("Tipo de acción", h("span", { text: action.tipo })),
+            spec("Estado", h("span", { text: action.estado })),
             spec("Marca", campo(h("span", {}), "marca", "Marca", { vacio: "Sin marca" })),
             spec("Grupo", campo(h("span", {}), "grupo", "Grupo", { vacio: "Sin grupo" })),
             spec("SKU", campo(h("span", {}), "sku", "SKU involucrado", { vacio: "Sin SKU" })),
@@ -3910,7 +3950,7 @@ function Footer() {
   return h("footer", { class: "footer" },
     h("div", { class: "shell" },
       h("span", { text: `${CONFIG.marca.nombre} · ${V.producto} — reporte vivo de acciones de la competencia` }),
-      h("span", { class: "mono", text: `EDICIÓN ${V.edicion} · ${monthLabel(V.currentMonth).toUpperCase()} · ACTUALIZACIÓN MENSUAL` })
+      h("span", { class: "mono", text: `EDICIÓN ${V.edicion} · ${monthLabel(V.currentMonth).toUpperCase()} · DATOS DEL EXCEL INSTITUCIONAL` })
     )
   );
 }
