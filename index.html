@@ -1196,11 +1196,21 @@ window.RadarAcceso = (() => {
     if (!Array.isArray(d.registros)) throw new Error('Respuesta de registros incorrecta.');
     return d.registros;
   }
-  return Object.freeze({listo,validar,registros,activa:()=>!!token});
+  async function portada(accion, datos) {
+    if (!token) throw new Error('Debes iniciar sesión.');
+    const actual = generacion, tokenActual = token;
+    const d = await solicitud(Object.assign({}, datos, {accion, token:tokenActual}));
+    if (actual !== generacion || tokenActual !== token) throw new Error('La sesión cambió. Actualiza el radar para comprobar el resultado.');
+    if (!d.ok) throw new Error(d.mensaje || 'No se pudo completar la operación de portada.');
+    return d;
+  }
+  return Object.freeze({listo,validar,registros,activa:()=>!!token,
+    prepararPortada:id=>portada('prepararPortada',{id}),
+    guardarPortada:datos=>portada('guardarPortada',datos)});
 })();
 </script>
 
-<div style="position:fixed;bottom:12px;left:12px;z-index:99999;background:#08334c;color:white;padding:10px 16px;border:1px solid #00cad2;border-radius:10px;font:13px sans-serif;max-width:90vw">Excel y portadas en OneDrive · Solo lectura</div>
+<div style="position:fixed;bottom:12px;left:12px;z-index:99999;background:#08334c;color:white;padding:10px 16px;border:1px solid #00cad2;border-radius:10px;font:13px sans-serif;max-width:90vw">OneDrive conectado · Datos en consulta · Portadas editables</div>
   <a class="skip-link" href="#main">Saltar al contenido</a>
 
   <!-- Punto de montaje de la aplicación -->
@@ -1315,7 +1325,7 @@ const CONFIG = {
   },
 
   portada: {
-    habilitada: false,
+    habilitada: true,
     anchoSalida: 1600,          // 1600 x 900 = 16:9
     altoSalida: 900,
     calidadJpeg: 0.82,
@@ -3604,13 +3614,10 @@ function Detail(action, ctx) {
   const btnPortada = h("button", { class: "btn ghost btn-portada-ficha" },
     I("image", 15), " Cambiar imagen de portada");
   btnPortada.addEventListener("click", () => {
-    toast("Conexión a OneDrive pendiente. La carga de fotos aún no está disponible.", "info");
-    return;
     abrirEditorPortada(action, () => {
       const nuevo = Poster(action, { size: "lg", label: false });
-      heroPoster.replaceWith(nuevo);
       heroCaja.replaceChildren(nuevo);
-      auto.pintar("ok");
+      indicador.textContent = "Portada actualizada";
     });
   });
 
@@ -3758,6 +3765,7 @@ function abrirEditorPortada(action, alGuardar) {
   const P = CONFIG.portada;
   let imagen = null;                 // HTMLImageElement cargado
   let archivo = null;
+  let guardando = false;
   const enc = { zoom: 1, ox: 0.5, oy: 0.5 };
 
   const lienzo = h("canvas", { class: "portada-canvas", width: 640, height: 360 });
@@ -3806,6 +3814,7 @@ function abrirEditorPortada(action, alGuardar) {
 
   /* ---- selección de archivo ---- */
   function tomarArchivo(f) {
+    if (guardando) return;
     aviso.textContent = "";
     if (!f) return;
     if (P.tiposAceptados.indexOf(f.type) === -1) {
@@ -3859,65 +3868,33 @@ function abrirEditorPortada(action, alGuardar) {
     salida.height = P.altoSalida;
     dibujarCubriendo(salida.getContext("2d"), imagen, salida.width, salida.height, enc);
 
-    let dataUrl;
-    try {
-      dataUrl = salida.toDataURL("image/jpeg", P.calidadJpeg);
-    } catch {
-      aviso.textContent = "El navegador bloqueó el procesamiento de la imagen.";
-      toast("No se pudo procesar la imagen en este navegador", "error");
-      return;
-    }
-    const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
-
+    guardando = true;
     btnGuardar.disabled = true;
     btnGuardar.classList.add("cargando");
     aviso.dataset.tipo = "info";
-    aviso.textContent = "Subiendo la imagen a Google Drive…";
-
+    aviso.textContent = "Preparando la portada…";
     try {
-      throw new Error("ONEDRIVE_PENDIENTE");
-      const token = await asegurarToken();
-      const res = await API.subirPortada({
-        id: action.id,
-        fila: action.fila,
-        titulo: action.titulo,
-        filename: nombreArchivo(action, archivo),
-        mimeType: "image/jpeg",
-        dataBase64: base64
-      }, token);
-
-      const url = (res && res.url) || "";
-      if (!url) throw new Error("El servidor no devolvió la URL de la imagen.");
-
-      action.imagen = url;
-      action.galeria = [url].concat((action.galeria || []).filter(g => g !== url)).slice(0, CONFIG.datos.maxImagenesGaleria);
-
-      cerrar();
-      toast("Portada guardada en Drive y registrada en la hoja", "ok");
-      if (typeof alGuardar === "function") alGuardar(action, url);
-    } catch (err) {
-      const codigo = (err && err.message) || "";
-      let mensaje;
-      if (codigo === "ONEDRIVE_PENDIENTE") {
-        pintar("error", "conexión a OneDrive pendiente");
-        toast("Conexión a OneDrive pendiente. Estos cambios no se han guardado.", "info");
-      } else if (codigo === "SIN_TOKEN") {
-        mensaje = "Se necesita el token de escritura. Ejecuta verToken() en Apps Script.";
-      } else if (codigo === "UNAUTHORIZED") {
-        API.olvidarTokenEscritura();
-        mensaje = "El token no es válido. Vuelve a intentarlo e ingresa el token vigente.";
-      } else if (codigo === "FILE_TOO_LARGE") {
-        mensaje = "La imagen resultó demasiado pesada. Prueba con una foto más pequeña.";
-      } else if (codigo === "NOT_FOUND" || codigo === "AMBIGUOUS") {
-        mensaje = (err && err.detalle) || "No se pudo ubicar el registro en la hoja.";
-      } else if (codigo === "TIMEOUT") {
-        mensaje = "La subida tardó demasiado. Revisa tu conexión y reintenta.";
-      } else {
-        mensaje = (err && err.detalle) || codigo || "Error desconocido.";
+      const destino = await window.RadarAcceso.prepararPortada(action.id);
+      const dataUrl = salida.toDataURL(destino.mimeType, P.calidadJpeg);
+      const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+      if (base64.length > 4194304) throw new Error("La imagen procesada supera 3 MB. Selecciona una imagen más sencilla o pequeña.");
+      aviso.textContent = "Guardando la foto en OneDrive…";
+      const res = await window.RadarAcceso.guardarPortada({
+        id: action.id, mimeType: destino.mimeType, dataBase64: base64
+      });
+      const anterior = action.imagen;
+      if (res.url) {
+        action.imagen = res.url;
+        action.galeria = [res.url].concat((action.galeria || []).filter(g => g !== anterior && g !== res.url)).slice(0, CONFIG.datos.maxImagenesGaleria);
+        if (typeof alGuardar === "function") alGuardar(action, res.url);
       }
+      guardando = false;
+      cerrar();
+      toast(res.url ? "Portada guardada en OneDrive" : "Foto guardada. Pulsa actualizar para verla.", "ok");
+    } catch (err) {
+      guardando = false;
       aviso.dataset.tipo = "error";
-      aviso.textContent = "No se pudo guardar: " + mensaje;
-      toast("No se pudo guardar la portada", "error");
+      aviso.textContent = (err && err.message) || "No se pudo confirmar la carga. Actualiza el radar antes de reintentar.";
       btnGuardar.disabled = false;
       btnGuardar.classList.remove("cargando");
     }
@@ -3926,6 +3903,7 @@ function abrirEditorPortada(action, alGuardar) {
   /* ---- montaje ---- */
   const onKey = e => { if (e.key === "Escape") cerrar(); };
   function cerrar() {
+    if (guardando) { aviso.textContent = "Espera a que termine el guardado."; return; }
     document.removeEventListener("keydown", onKey);
     document.body.style.overflow = previo;
     caja.remove();
@@ -3947,7 +3925,7 @@ function abrirEditorPortada(action, alGuardar) {
       btnGuardar
     ),
     aviso,
-    h("p", { class: "portada-nota", text: "La imagen se recorta a 1600 × 900 px, se guarda en la carpeta de evidencias de Google Drive y su enlace queda escrito en la columna \"Imagen principal\" de la hoja." })
+    h("p", { class: "portada-nota", text: "La imagen se recorta a 1600 × 900 px y se guarda en OneDrive, asociada al código de esta acción. Si existe una portada, se reemplaza su contenido." })
   );
 
   const caja = h("div", { class: "portada-overlay" }, panel);
