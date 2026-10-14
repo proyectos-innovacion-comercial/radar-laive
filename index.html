@@ -1181,8 +1181,8 @@ body.radar-sin-sesion #root,body.radar-sin-sesion .skip-link{display:none!import
 <section id="radar-ingreso" aria-label="Ingreso al radar">
 <form id="radar-acceso-form">
 <h1>Radar <span>Laive</span></h1>
-<p>Ingresa con tu usuario y contraseña.</p>
-<label for="radar-usuario">Usuario</label><input id="radar-usuario" autocomplete="username" required maxlength="100">
+<p>Ingresa con tu correo y contraseña del radar.</p>
+<label for="radar-usuario">Correo corporativo</label><input id="radar-usuario" autocomplete="username" required maxlength="100">
 <label for="radar-clave">Contraseña</label><input id="radar-clave" type="password" autocomplete="current-password" required maxlength="200">
 <button id="radar-entrar" type="submit">Ingresar</button>
 <p id="radar-acceso-mensaje" role="status" aria-live="polite"></p>
@@ -1193,7 +1193,7 @@ body.radar-sin-sesion #root,body.radar-sin-sesion .skip-link{display:none!import
 window.RadarAcceso = (() => {
   const URL_API = 'https://script.google.com/macros/s/AKfycbwr5oJScjmsiP5fFz4dheXQq9Z8lD4dtMPUchGbIcc7-WOBeXVJGLl1M3L7UFE6MS8/exec';
   const el = id => document.getElementById(id);
-  let token = '', usuario = '', resolver, comprobando = false, generacion = 0;
+  let token = '', usuario = '', rol = '', resolver, comprobando = false, generacion = 0;
   const listo = new Promise(resolve => { resolver = resolve; });
   const mensaje = texto => { el('radar-acceso-mensaje').textContent = texto; };
   async function solicitud(datos) {
@@ -1211,7 +1211,7 @@ window.RadarAcceso = (() => {
     } finally { clearTimeout(temporizador); }
   }
   function bloquear(texto) {
-    token = ''; usuario = ''; generacion++;
+    token = ''; usuario = ''; rol = ''; generacion++; document.body.classList.remove('radar-editor');
     window.dispatchEvent(new Event('radar:salida'));
     document.body.classList.add('radar-sin-sesion');
     el('radar-ingreso').hidden = false; el('radar-cerrar').hidden = true;
@@ -1222,6 +1222,9 @@ window.RadarAcceso = (() => {
     if (!token) throw new Error('Debes iniciar sesión.');
     const d = await solicitud({accion:'consultar',token});
     if (!d.ok) { bloquear(d.mensaje); throw new Error(d.mensaje); }
+    if(!['editor','consultor'].includes(d.rol))throw new Error('No se pudo validar el permiso de acceso.');
+    if(rol && rol!==d.rol){bloquear('Tus permisos cambiaron. Vuelve a ingresar.');throw new Error('Tus permisos cambiaron.');}
+    rol=d.rol;document.body.classList.toggle('radar-editor',rol==='editor');
     return d;
   }
   el('radar-acceso-form').addEventListener('submit',async e => {
@@ -1262,20 +1265,21 @@ window.RadarAcceso = (() => {
   }
   async function portada(accion, datos) {
     if (!token) throw new Error('Debes iniciar sesión.');
+    if(rol!=='editor')throw new Error('Tu acceso es de consulta.');
     const actual = generacion, tokenActual = token;
     const d = await solicitud(Object.assign({}, datos, {accion, token:tokenActual}));
     if (actual !== generacion || tokenActual !== token) throw new Error('La sesión cambió. Actualiza el radar para comprobar el resultado.');
     if (!d.ok) throw new Error(d.mensaje || 'No se pudo completar la operación de portada.');
     return d;
   }
-  return Object.freeze({listo,validar,registros,activa:()=>!!token,
+  return Object.freeze({listo,validar,registros,activa:()=>!!token,editor:()=>!!token&&rol==='editor',
     prepararPortada:id=>portada('prepararPortada',{id}),
     guardarPortada:datos=>portada('guardarPortada',datos),
     crearAccion:datos=>portada('crearAccion',datos)});
 })();
 </script>
 
-<div style="position:fixed;bottom:12px;left:12px;z-index:99999;background:#08334c;color:white;padding:10px 16px;border:1px solid #00cad2;border-radius:10px;font:13px sans-serif;max-width:90vw">OneDrive conectado · Registro de acciones y portadas</div>
+<div style="position:fixed;bottom:12px;left:12px;z-index:99999;background:#08334c;color:white;padding:10px 16px;border:1px solid #00cad2;border-radius:10px;font:13px sans-serif;max-width:90vw">OneDrive institucional · Radar Laive</div>
   <a class="skip-link" href="#main">Saltar al contenido</a>
 
   <!-- Punto de montaje de la aplicación -->
@@ -2851,7 +2855,7 @@ function ActionCard(action, onOpen, index = 0, onPortada = null) {
     card.appendChild(h("span", { class: "chip-nuevo", text: "NUEVO" }));
   }
 
-  if (CONFIG.portada.habilitada && typeof onPortada === "function") {
+  if (CONFIG.portada.habilitada && window.RadarAcceso.editor() && typeof onPortada === "function") {
     const btn = h("button", {
       class: "btn-portada",
       title: "Cargar imagen de portada 16:9",
@@ -3705,7 +3709,7 @@ function Detail(action, ctx) {
       h("div", { class: "detail-barra" },
         h("span", { class: "eyebrow", text: "RADAR LAIVE · FICHA DE LA ACCIÓN" }),
         indicador,
-        CONFIG.portada.habilitada ? btnPortada : null
+        CONFIG.portada.habilitada && window.RadarAcceso.editor() ? btnPortada : null
       ),
       h("div", { class: "detail-meta" },
         BrandLabel(action.marca),
@@ -4432,7 +4436,7 @@ function render() {
     main.appendChild(vista);
     Anim.transicionVista(vista);
     app.appendChild(UI.Footer());
-    if (CONFIG.captura.habilitada) app.appendChild(montarCaptura(ctx, async id => { await sincronizar(true); if (id && V.actions.some(a => a.id === id)) { estado.detalle = V.actions.find(a => a.id === id); location.hash = "#/accion/" + encodeURIComponent(id); renderDetalle(); } }));
+    if (CONFIG.captura.habilitada && window.RadarAcceso.editor()) app.appendChild(montarCaptura(ctx, async id => { await sincronizar(true); if (id && V.actions.some(a => a.id === id)) { estado.detalle = V.actions.find(a => a.id === id); location.hash = "#/accion/" + encodeURIComponent(id); renderDetalle(); } }));
   }
 
   cont.appendChild(app);
