@@ -676,7 +676,7 @@ input { font-family: inherit; }
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   animation: fade .28s var(--ease) both; padding: 40px 20px;
 }
-.lb-img { max-width: min(1100px, 92vw); max-height: 84vh; border-radius: var(--r-md); box-shadow: var(--shadow-lg); }
+.lb-img { width: min(1400px, 92vw); height: 84vh; object-fit: contain; border-radius: var(--r-md); box-shadow: var(--shadow-lg); }
 .lb-close, .lb-nav {
   position: absolute; width: 46px; height: 46px; border-radius: 50%;
   display: grid; place-items: center; color: #fff;
@@ -5058,18 +5058,22 @@ function Detail(action, ctx) {
 
   /* ---- ubicación ---- */
   const ubic = sinDato(action.ubicacion);
-  const urlMaps = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(ubic);
+
   const mapeable = ubicacionMapeable(ubic);
   /* Lista detallada de ubicaciones (botón ⋯) */
   const capital = t => { const x = String(t).trim().toLowerCase(); return x.charAt(0).toUpperCase() + x.slice(1); };
   const partesUbic = ubic.split(";");
   const zona = partesUbic.length > 1 ? capital(partesUbic[0]) : "";
-  const puntos = (partesUbic.length > 1 ? partesUbic.slice(1).join(",") : ubic).split(/[,|\n]/).map(x => x.replace(/\.$/, "").trim()).filter(Boolean).map(capital);
+  const puntos = (partesUbic.length > 1 ? partesUbic.slice(1).join(",") : ubic).split(/[|\n;]/).map(x => x.replace(/\.$/, "").trim()).filter(Boolean).map(capital);
+  // Buscar cada punto por separado; una dirección con comas sigue siendo un solo punto.
+  const consultaPunto = punto => [punto.includes(',') ? punto : '"' + punto + '"', zona, /per[uú]/i.test(punto + ' ' + zona) ? '' : 'Perú'].filter(Boolean).join(', ');
+  const mapaPunto = punto => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(consultaPunto(punto));
+  const urlMaps = mapaPunto(puntos[0] || ubic);
   const lista = h("div", { class: "fx-ubic-lista", hidden: "hidden", role: "dialog", "aria-label": "Detalle de ubicaciones" },
     h("div", { class: "fx-ubic-lista-cab" },
       h("b", { text: zona ? `${zona} · ${puntos.length} ${puntos.length === 1 ? "punto" : "puntos"}` : `${puntos.length} ${puntos.length === 1 ? "ubicación" : "ubicaciones"}` }),
       h("button", { class: "fx-ubic-x", "aria-label": "Cerrar lista", onclick: e => { e.stopPropagation(); lista.hidden = true; } }, I("close", 14))),
-    h("ul", {}, ...puntos.map(x => h("li", {}, h("span", { class: "fx-pin" }, I("pin", 14)), x))));
+    h("ul", {}, ...puntos.map(x => h("li", {}, h("span", { class: "fx-pin" }, I("pin", 14)), h("a", { href: mapaPunto(x), target: "_blank", rel: "noopener noreferrer", text: x })))));
   const btnLista = h("button", { class: "fx-mas", "aria-label": "Ver detalle de ubicaciones", title: "Ver detalle de ubicaciones",
     onclick: e => { e.stopPropagation(); lista.hidden = !lista.hidden; } }, h("i"), h("i"), h("i"));
   const cerrarLista = e => { if (!lista.hidden && !lista.contains(e.target) && e.target !== btnLista) lista.hidden = true; };
@@ -5080,9 +5084,9 @@ function Detail(action, ctx) {
     h("div", { class: "fx-ubic-cuerpo" },
       mapeable
         ? h("div", { class: "fx-mapa" }, h("iframe", { title: `Mapa de ${ubic}`, loading: "lazy", referrerpolicy: "no-referrer-when-downgrade",
-            src: "https://www.google.com/maps?q=" + encodeURIComponent(ubic) + "&z=12&output=embed" }))
+            src: "https://www.google.com/maps?q=" + encodeURIComponent(consultaPunto(puntos[0] || ubic)) + "&z=16&output=embed" }))
         : h("div", { class: "fx-mapa vacio" }, Ico("mundo", 30), h("span", { text: ubic ? "Alcance " + ubic.toLowerCase() : "Sin ubicación" })),
-      mapeable ? h("a", { class: "fx-ver", href: urlMaps, target: "_blank", rel: "noopener noreferrer" }, I("pin", 16), "Ver ubicaciones", Ico("externo", 15)) : null));
+      mapeable ? h("a", { class: "fx-ver", href: urlMaps, target: "_blank", rel: "noopener noreferrer" }, I("pin", 16), puntos.length > 1 ? "Buscar primer punto en Maps" : "Buscar este punto en Maps", Ico("externo", 15)) : null));
 
   const caja = (cls, ico, titulo, texto, vacio) => h("section", { class: "fd-caja " + cls },
     h("span", { class: "fd-caja-ico" }, Ico(ico, 20)),
