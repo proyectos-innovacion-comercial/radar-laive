@@ -2104,7 +2104,8 @@ window.RadarAcceso = (() => {
   let token = '', usuario = '', nombre = '', rol = '', resolver, comprobando = false, generacion = 0;
   const listo = new Promise(resolve => { resolver = resolve; });
   const mensaje = texto => { el('radar-acceso-mensaje').textContent = texto; };
-  async function solicitud(datos) {
+  let escrituras = 0;
+  async function solicitudUna(datos) {
     const control = new AbortController();
     const temporizador = setTimeout(() => control.abort(), datos.accion === 'guardarPortada' ? 120000 : 45000);
     try {
@@ -2112,11 +2113,20 @@ window.RadarAcceso = (() => {
       if (!r.ok) throw new Error('Respuesta HTTP ' + r.status);
       const d = await r.json();
       if (!d || typeof d.ok !== 'boolean') throw new Error('Respuesta inesperada.');
+      if(d.codigo==='SESION_INVALIDA') bloquear(d.mensaje || 'Tu sesión terminó. Vuelve a ingresar.');
       return d;
     } catch(e) {
       if(e.name === 'AbortError') throw new Error('Se agotó el tiempo de espera. Intenta nuevamente.');
       throw e;
     } finally { clearTimeout(temporizador); }
+  }
+  async function solicitud(datos) {
+    const lectura=['consultar','registros','prepararPortada','estadoPortada'].includes(datos.accion);
+    const intentos=lectura ? 2 : 1;
+    for(let n=0;n<intentos;n++){
+      try{return await solicitudUna(datos);}
+      catch(e){if(n+1===intentos || !token)throw e;await new Promise(r=>setTimeout(r,900));}
+    }
   }
   function bloquear(texto) {
     token = ''; usuario = ''; nombre = ''; rol = ''; generacion++; document.body.classList.remove('radar-editor');
@@ -2129,7 +2139,7 @@ window.RadarAcceso = (() => {
   async function validar() {
     if (!token) throw new Error('Debes iniciar sesión.');
     const d = await solicitud({accion:'consultar',token});
-    if (!d.ok) { bloquear(d.mensaje); throw new Error(d.mensaje); }
+    if (!d.ok) { if(d.codigo==='SESION_INVALIDA') bloquear(d.mensaje); throw new Error(d.mensaje); }
     if(!['editor','consultor'].includes(d.rol))throw new Error('No se pudo validar el permiso de acceso.');
     if(rol && rol!==d.rol){bloquear('Tus permisos cambiaron. Vuelve a ingresar.');throw new Error('Tus permisos cambiaron.');}
     rol=d.rol;document.body.classList.toggle('radar-editor',rol==='editor');
@@ -2155,11 +2165,11 @@ window.RadarAcceso = (() => {
     } catch(e) { bloquear('Se cerró la vista local; no se confirmó el cierre en el servidor.'); }
     finally { el('radar-cerrar').disabled=false; }
   });
-  // Revisa la sesión mientras la pestaña está visible. Un fallo de red bloquea la vista.
+  // Comprueba la sesión sin repintar datos ni cerrar por errores de conexión.
   setInterval(async () => {
-    if(!token || document.hidden || comprobando) return;
+    if(!token || document.hidden || comprobando || escrituras) return;
     comprobando=true;
-    try { await validar(); } catch(e) { bloquear('Vuelve a ingresar para validar tu sesión.'); }
+    try { await validar(); } catch(e) { console.warn('[radar] Validación pendiente; se conserva la sesión ante fallos temporales.'); }
     finally { comprobando=false; }
   },60000);
   async function registros() {
@@ -2170,6 +2180,33 @@ window.RadarAcceso = (() => {
     if (!d.ok) throw new Error(d.mensaje || 'No se pudo consultar el Excel.');
     if (!Array.isArray(d.registros)) throw new Error('Respuesta de registros incorrecta.');
     return d.registros;
+  }
+  const recibosFotos = new Map();
+  window.addEventListener('beforeunload',e=>{if(escrituras){e.preventDefault();e.returnValue='';}});
+  async function guardarFoto(datos) {
+    const generacionFoto=generacion;
+    const bytes=new TextEncoder().encode(datos.id+'|'+datos.mimeType+'|'+datos.dataBase64);
+    const firma=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
+    const clave=generacion+'|'+firma;
+    let solicitudId=recibosFotos.get(clave);
+    if(!solicitudId){solicitudId=crypto.randomUUID();recibosFotos.set(clave,solicitudId);}
+    escrituras++;
+    try {
+      const res=await portada('guardarPortada',Object.assign({},datos,{solicitudId}));
+      recibosFotos.delete(clave);return res;
+    } catch(error) {
+      if(token){
+        for(let intento=0;intento<2;intento++){
+          try {
+            const comprobacion=await solicitud({accion:'estadoPortada',token,solicitudId,id:datos.id});
+            if(generacionFoto!==generacion)throw new Error('La sesión cambió.');
+            if(comprobacion.ok&&comprobacion.resultado){recibosFotos.delete(clave);return comprobacion.resultado;}
+          }catch(e){}
+          if(intento===0)await new Promise(r=>setTimeout(r,2000));
+        }
+      }
+      throw new Error(error.message+' No se confirmó el resultado; no se reenvió automáticamente la foto. Conserva esta ventana para comprobar o reintentar.');
+    } finally {escrituras--;}
   }
   async function portada(accion, datos) {
     if (!token) throw new Error('Debes iniciar sesión.');
@@ -2182,7 +2219,7 @@ window.RadarAcceso = (() => {
   }
   return Object.freeze({listo,validar,registros,activa:()=>!!token,usuario:()=>usuario,nombre:()=>nombre,rol:()=>rol,editor:()=>!!token&&rol==='editor',
     prepararPortada:id=>portada('prepararPortada',{id}),
-    guardarPortada:datos=>portada('guardarPortada',datos),
+    guardarPortada:guardarFoto,
     guardarEncuadre:datos=>portada('guardarEncuadre',datos),
     crearAccion:datos=>portada('crearAccion',datos)});
 })();
@@ -2218,7 +2255,7 @@ window.RadarFotos = (() => {
     const progreso=h('progress',{max:1,value:0,'aria-label':'Portadas confirmadas'});
     const enviar=h('button',{type:'button',class:'btn',text:'Cargar portadas',disabled:true});
     const detener=h('button',{type:'button',class:'btn',text:'Pausar después de esta foto',hidden:true});
-    const actualizar=h('button',{type:'button',class:'btn',text:'Terminar y actualizar radar',hidden:true,onclick:async()=>{if(!trabajando){desmontar();await terminado();}}});
+    const actualizar=h('button',{type:'button',class:'btn',text:'Terminar carga',hidden:true,onclick:async()=>{if(!trabajando){desmontar();window.dispatchEvent(new Event('radar:fotos-actualizadas'));}}});
     const exclusiones=h('p',{class:'captura-nota'});
     const nota=h('p',{class:'captura-nota',text:'Selecciona hasta 20 portadas sueltas de la carpeta Portadas. El nombre debe ser el ID exacto: RAD-0005.jpg, por ejemplo. Se guarda el archivo original completo (JPG o PNG, hasta 3 MB), sin recortar, reducir ni recomprimir. No selecciones el ZIP ni imágenes adicionales como RAD-0005_02.jpg.'});
     function pintar(){
@@ -2271,6 +2308,7 @@ window.RadarFotos = (() => {
             r.estado='Guardando…';pintar();enviada=true;
             const res=await window.RadarAcceso.guardarPortada({id:r.accion.id,mimeType:r.file.type,dataBase64});
             r.estado='Guardada';
+            if(res.enlacePendiente)r.error='Foto guardada; enlace de Excel pendiente de confirmar.';
             if(res.url){const anterior=r.accion.imagen;r.accion.imagen=res.url;r.accion.encuadreTarjeta=null;r.accion.galeria=[res.url,...(r.accion.galeria||[]).filter(x=>x!==anterior&&x!==res.url)];}
           }catch(e){r.estado=enviada?'Sin confirmar':'Pendiente';r.error=r.estado+': '+e.message;huboError=true;pintar();break;}
           pintar();await esperar(1500);
@@ -2278,7 +2316,7 @@ window.RadarFotos = (() => {
       }finally{
         trabajando=false;ejecutando=false;ocupado(false);entrada.disabled=confirmar.disabled=false;detener.hidden=true;
         const n=filas.filter(r=>r.estado==='Guardada').length;
-        estado.textContent=n+' de '+filas.filter(r=>!r.invalida).length+' portadas confirmadas.'+(huboError?' Lote detenido. Si dice Sin confirmar, comprueba esa foto en OneDrive antes de reintentar: pudo haberse guardado. El reintento reemplaza la portada del mismo ID y omite las confirmadas.':pausar?' Lote pausado. Puedes continuar con las pendientes.':' Puedes terminar y actualizar el radar.');
+        estado.textContent=n+' de '+filas.filter(r=>!r.invalida).length+' portadas confirmadas.'+(huboError?' Lote detenido. Si dice Sin confirmar, comprueba esa foto en OneDrive antes de reintentar: pudo haberse guardado. El reintento reemplaza la portada del mismo ID y omite las confirmadas.':pausar?' Lote pausado. Puedes continuar con las pendientes.':' Las portadas ya están actualizadas. Puedes terminar la carga.');
         enviar.textContent='Continuar / reintentar pendientes';pintar();
         if(destruido)desmontar();
       }
@@ -3812,6 +3850,7 @@ function Poster(action, opts = {}) {
       cont.appendChild(h("span", { class: "poster-err", text: "Imagen no disponible" }));
     });
     cont.appendChild(img);
+    if(img.complete&&img.naturalWidth)img.classList.add("cargada");
   } else {
     cont.appendChild(fondoGenerativo(monogram, gram, mgSize));
   }
@@ -5038,7 +5077,8 @@ function Detail(action, ctx) {
     class: "fx-mini", "aria-label": `Imagen ${i + 1}`, onclick: () => { actual = i; pintarFoto(); } }, h("img", { src: u, alt: "", loading: "lazy", onerror: e => { e.target.parentElement.classList.add("rota"); } }))) : []));
   const editor = CONFIG.portada.habilitada && window.RadarAcceso.editor();
   const btnPortada = editor ? h("button", { class: "fx-portada", onclick: () => abrirEditorPortada(action, () => {
-      galeria.unshift(action.imagen); actual = 0; pintarFoto(); }) }, I("image", 16), action.imagen ? "Ajustar tarjeta" : "Agregar foto original") : null;
+      if(action.imagen&&galeria[0]!==action.imagen)galeria.unshift(action.imagen); actual = 0; pintarFoto();
+      document.querySelectorAll('[data-encuadre-id]').forEach(img=>{if(img.dataset.encuadreId===action.id){img.src=action.imagen;aplicarEncuadreImagen(img,action.encuadreTarjeta);}}); }) }, I("image", 16), action.imagen ? "Ajustar tarjeta" : "Agregar foto original") : null;
   pintarFoto();
 
   /* ---- información ---- */
@@ -5508,7 +5548,7 @@ function abrirLightbox(imagenes, indice, titulo) {
   if (!lista.length) return;
   let i = Math.max(0, Math.min(indice, lista.length - 1));
 
-  const img = h("img", { src: lista[i], alt: titulo || "Evidencia", class: "lb-img" });
+  const img = h("img", { src: lista[i], alt: titulo || "Evidencia", class: "lb-img", decoding:"async", fetchpriority:"high" });
   const contadorEl = h("span", { class: "lb-count", text: `${i + 1} / ${lista.length}` });
 
   const ir = paso => {
@@ -6187,12 +6227,14 @@ function cerrarDetalle() {
    ============================================================ */
 let syncSeq = 0;
 async function sincronizar(forzar) {
+  if(estado.cargando) return;
+  const teniaDatos=!!V;
   if(window.RadarFotos && window.RadarFotos.ocupada()) return;
   const miSync = ++syncSeq;
   estado.cargando = true;
   estado.error = null;
   Anim.barridoSync(true);
-  render();
+  if(!teniaDatos) render();
 
   try {
     if (forzar) API.invalidarCache();
@@ -6216,8 +6258,8 @@ async function sincronizar(forzar) {
     if (miSync !== syncSeq) return;
     console.error("[app] carga fallida", err);
     estado.cargando = false;
-    estado.error = mensajeError(err);
-    render();
+    if(teniaDatos){estado.error=null;UI.toast("No se pudo actualizar. Se conserva la información anterior. "+mensajeError(err),"error");}
+    else {estado.error=mensajeError(err);render();}
   } finally {
     if (miSync === syncSeq) Anim.barridoSync(false);
   }
@@ -6252,13 +6294,11 @@ window.addEventListener('radar:salida', () => {
   vistaPintada = false;
   Anim.barridoSync(false);
 });
+window.addEventListener('radar:fotos-actualizadas',()=>{if(V){UI.setDataset(V);render();}});
 window.addEventListener('radar:ingreso', () => {
   if (iniciado) sincronizar(true);
 });
-// Actualiza la lectura sin publicar de nuevo el HTML.
-setInterval(() => {
-  if (iniciado && window.RadarAcceso.activa() && !document.hidden && !estado.cargando) sincronizar(false);
-}, 300000);
+// Los datos se actualizan al ingresar o mediante el botón Actualizar.
 async function iniciar() {
   await window.RadarAcceso.listo;
   iniciado = true;
