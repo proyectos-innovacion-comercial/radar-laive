@@ -6226,17 +6226,18 @@ function cerrarDetalle() {
    Carga y sincronización
    ============================================================ */
 let syncSeq = 0;
+let syncEnCurso = null;
 async function sincronizar(forzar) {
-  if(estado.cargando) return;
+  if(syncEnCurso !== null) return;
   const teniaDatos=!!V;
   if(window.RadarFotos && window.RadarFotos.ocupada()) return;
   const miSync = ++syncSeq;
+  syncEnCurso = miSync;
   estado.cargando = true;
   estado.error = null;
-  Anim.barridoSync(true);
-  if(!teniaDatos) render();
-
   try {
+    Anim.barridoSync(true);
+    if(!teniaDatos) render();
     if (forzar) API.invalidarCache();
     const ds = await API.cargarDataset({ forzar: !!forzar });
     if (miSync !== syncSeq) return;          // llegó una sincronización más reciente
@@ -6261,6 +6262,7 @@ async function sincronizar(forzar) {
     if(teniaDatos){estado.error=null;UI.toast("No se pudo actualizar. Se conserva la información anterior. "+mensajeError(err),"error");}
     else {estado.error=mensajeError(err);render();}
   } finally {
+    if (syncEnCurso === miSync) syncEnCurso = null;
     if (miSync === syncSeq) Anim.barridoSync(false);
   }
 }
@@ -6282,6 +6284,7 @@ function mensajeError(err) {
 let iniciado = false;
 window.addEventListener('radar:salida', () => {
   ++syncSeq;
+  syncEnCurso = null;
   cerrarDetalle();
   liberarVista();
   V = null;
@@ -6311,10 +6314,24 @@ async function iniciar() {
   sincronizar(false);
 }
 
+function mostrarErrorInicio(error) {
+  console.error('[radar] Error de inicio', error);
+  const cont=document.getElementById('root');
+  if(!cont)return;
+  const aviso=document.createElement('div');
+  aviso.className='estado-carga';
+  const texto=document.createElement('p');
+  texto.textContent='No se pudo iniciar el radar. Pulsa Reintentar para volver a cargar.';
+  const boton=document.createElement('button');
+  boton.type='button';boton.className='btn';boton.textContent='Reintentar';
+  boton.addEventListener('click',()=>location.reload());
+  aviso.append(texto,boton);cont.replaceChildren(aviso);
+}
+const arrancarRadar=()=>iniciar().catch(mostrarErrorInicio);
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", iniciar);
+  document.addEventListener("DOMContentLoaded", arrancarRadar);
 } else {
-  iniciar();
+  arrancarRadar();
 }
 
 /* Punto de entrada expuesto solo para diagnóstico manual en consola */
