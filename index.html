@@ -2101,7 +2101,17 @@ window.RadarCatalogo = (() => {
 <style>
 .rc-selector{position:relative;min-width:165px}.rc-selector select[hidden]{display:none!important}
 .rc-disparador{display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;text-align:left}
-.rc-disparador:after{content:'⌄';color:var(--ink-3)}
+.rc-disparador{position:relative}
+.rc-disparador::after{content:"";position:absolute;right:14px;top:50%;width:7px;height:7px;border-right:1.5px solid var(--ink-3);border-bottom:1.5px solid var(--ink-3);transform:translateY(-65%) rotate(45deg);pointer-events:none}
+/* Desplazamiento discreto para los menús con búsqueda. */
+.rc-opciones{scrollbar-width:thin;scrollbar-color:#a8abb0 transparent}
+.rc-opciones::-webkit-scrollbar{width:6px;height:6px}
+.rc-opciones::-webkit-scrollbar-track{background:transparent}
+.rc-opciones::-webkit-scrollbar-thumb{background:#a8abb0;border-radius:999px}
+.rc-opciones::-webkit-scrollbar-thumb:hover{background:#858990}
+.rc-opciones::-webkit-scrollbar-button{display:none;width:0;height:0}
+[data-theme="dark"] .rc-opciones{scrollbar-color:#686e76 transparent}
+[data-theme="dark"] .rc-opciones::-webkit-scrollbar-thumb{background:#686e76}
 .rc-menu[hidden]{display:none!important}.rc-menu{position:absolute;top:calc(100% + 7px);left:0;z-index:100;width:min(340px,calc(100vw - 40px));background:var(--card);border:1px solid var(--line-2);border-radius:14px;padding:10px;box-shadow:var(--shadow-lg)}
 .rc-menu input{width:100%;box-sizing:border-box;border:1px solid var(--line-2);border-radius:8px;padding:10px 12px;background:var(--paper);color:var(--ink);font:14px var(--sans);margin-bottom:8px}
 .rc-opciones{max-height:260px;overflow-y:auto;overscroll-behavior:contain}
