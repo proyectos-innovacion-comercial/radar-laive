@@ -2139,6 +2139,10 @@ window.RadarCatalogo = (() => {
 .rc-opcion small{color:var(--ink-3);flex:none}.rc-opcion:hover,.rc-opcion:focus-visible,.rc-opcion[aria-selected=true]{background:var(--paper-2);color:var(--teal-ink)}
 .rc-vacio{padding:12px;color:var(--ink-3);font-size:14px}
 </style>
+<style>
+.fselect:disabled{background:var(--paper-2);color:var(--ink-3);border-color:var(--line-2);opacity:.6;cursor:not-allowed}
+.select-wrap.cadena-inactiva::after{opacity:.4}
+</style>
 </head>
 <body class="radar-sin-sesion">
 
@@ -5387,15 +5391,31 @@ function Explorer(ctx) {
     limite = CONFIG.datos.tamanoPagina;
     barra.querySelectorAll("select").forEach(s => { s.value = ""; s.classList.remove("set"); s.dispatchEvent(new Event("radar:limpiar")); });
     actualizarLimpiar();
+    actualizarCadena();
     ctx.setFiltros({}, "");
     pintar(true);
   }
 
+  let selectorCadena = null;
+  function actualizarCadena() {
+    if (!selectorCadena) return;
+    const disponibles = [...new Set(V.actions.filter(a => !f.canal || a.canal.includes(f.canal)).flatMap(a => a.cadena || []))].sort();
+    const habilitado = (!f.canal || f.canal === 'Moderno' || f.canal === 'Digital') && disponibles.length > 0;
+    if (!habilitado || !disponibles.includes(f.cadena)) f.cadena = '';
+    selectorCadena.replaceChildren(h('option', {value:'', text:habilitado?'Cadena':'No aplica para este canal'}), ...disponibles.map(c => h('option', {value:c,text:c})));
+    selectorCadena.disabled = !habilitado;
+    selectorCadena.setAttribute('aria-disabled', String(!habilitado));
+    selectorCadena.title = habilitado ? 'Filtrar por cadena' : 'No hay cadenas disponibles para este canal';
+    selectorCadena.value = f.cadena || '';
+    selectorCadena.classList.toggle('set', !!f.cadena);
+    selectorCadena.parentElement?.classList.toggle('cadena-inactiva', !habilitado);
+  }
   function selector(k, label, opts) {
     const sel = h("select", {
       class: "fselect" + (f[k] ? " set" : ""), "aria-label": label, value: f[k],
       onchange: e => {
         f[k] = e.target.value;
+        if (k === "canal") actualizarCadena();
         e.target.classList.toggle("set", !!e.target.value);
         limite = CONFIG.datos.tamanoPagina;
         actualizarLimpiar();
@@ -5407,6 +5427,7 @@ function Explorer(ctx) {
       ...opts.map(o => h("option", { value: o.v ?? o, text: o.l ?? o }))
     );
     sel.value = f[k] || "";
+    if (k === "cadena") selectorCadena = sel;
     if (k !== 'tipo' && k !== 'categoria') return h("div", { class: "select-wrap" }, sel);
     sel.hidden=true;sel.tabIndex=-1;sel.setAttribute('aria-hidden','true');
     const uid='filtro-'+k;
@@ -5487,6 +5508,8 @@ function Explorer(ctx) {
       )
     )
   );
+
+  actualizarCadena();
 
   const vista = h("div", { class: "view" }, barra, zonaResultados, h("div", { class: "shell centrado" }, btnMas));
 
