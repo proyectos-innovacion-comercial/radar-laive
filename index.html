@@ -3542,7 +3542,8 @@ function construirDataset(filas, config) {
   if (!rows.length) throw new Error("HOJA_VACIA");
 
   const mapa = {};
-  Object.keys(rows[0]).forEach(k => { mapa[norm(k)] = k; });
+  // Los metadatos opcionales, como el encuadre, pueden existir solo en algunas filas.
+  rows.forEach(fila => Object.keys(fila).forEach(k => { mapa[norm(k)] = k; }));
 
   const chequeo = validarEncabezados(Object.keys(rows[0]));
   if (!chequeo.valido) log("Encabezados faltantes en la hoja:", chequeo.faltantes);
