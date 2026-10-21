@@ -2095,7 +2095,27 @@ window.RadarCatalogo = (() => {
     if (!tipos.includes(campos['Tipo de acción'])) errores.push('Tipo de acción: selecciona un concepto del catálogo. Los tipos combinados requieren elegir la mecánica principal.');
     return errores;
   }
-  return Object.freeze({categorias: Object.freeze(categorias), tipos: Object.freeze(tipos), categoria, tipo, validar});
+  function distribucion(canales, cadenas = []) {
+    const canal = [], cadena = [];
+    const nombres = ['Wong', 'Metro', 'Plaza Vea', 'Tottus'];
+    const agregar = (lista, valor) => { if (valor && !lista.includes(valor)) lista.push(valor); };
+    (Array.isArray(cadenas) ? cadenas : String(cadenas || '').split(';')).forEach(c => {
+      const nombre = nombres.find(n => clave(n) === clave(c)); if (nombre) agregar(cadena, nombre);
+    });
+    (Array.isArray(canales) ? canales : String(canales || '').split(';')).forEach(valor => {
+      const original = String(valor).trim(), k = clave(original);
+      const nombre = nombres.find(n => new RegExp('\\b' + clave(n).replace(' ', '\\s+') + '\\b').test(k));
+      if (nombre) agregar(cadena, nombre);
+      const digital = /wong\.pe|app wong|digital|ecommerce|e-commerce/.test(k);
+      if (digital) agregar(canal, 'Digital');
+      else if (/^moderno\b/.test(k) || nombre) agregar(canal, 'Moderno');
+      else if (/^tradicional$/.test(k)) agregar(canal, 'Tradicional');
+      else agregar(canal, original ? original.charAt(0).toUpperCase() + original.slice(1).toLowerCase() : '');
+      if (/\bmoderno\b/.test(k) && /\btradicional\b/.test(k)) agregar(canal, 'Tradicional');
+    });
+    return {canal, cadena};
+  }
+  return Object.freeze({categorias: Object.freeze(categorias), tipos: Object.freeze(tipos), categoria, tipo, validar, distribucion});
 })();
 </script>
 <style>
@@ -3580,6 +3600,7 @@ function construirDataset(filas, config) {
       descripcion,
       sku: campo(fila, mapa, ["SKU involucrado", "SKU"]) || "—",
       canal: splitList(campo(fila, mapa, ["Canal", "Canales"])),
+      cadena: splitList(campo(fila, mapa, ["Cadena"])),
       ubicacion: campo(fila, mapa, ["Ubicación", "Ubicacion"]) || "—",
       fuente: campo(fila, mapa, ["Fuente"]) || "—",
       insight: campo(fila, mapa, ["Insight", "Insight estratégico", "Insight estrategico"]),
@@ -3620,8 +3641,9 @@ function finalizar(data) {
     if (!a.marca) a.marca = "Sin marca";
     if (!data.brands[a.marca]) data.brands[a.marca] = { hue: hueFor(a.marca), name: a.marca, grupo: "" };
     if (!Array.isArray(a.canal)) a.canal = splitList(a.canal);
-    a.canal = [...new Set(a.canal.flatMap(c => String(c).split(/\s+y\s+|\s*\/\s*/i)).map(c => c.trim()).filter(Boolean)
-      .map(c => c.charAt(0).toUpperCase() + c.slice(1).toLowerCase()))];
+    const distribucion = window.RadarCatalogo.distribucion(a.canal, a.cadena);
+    a.canal = distribucion.canal;
+    a.cadena = distribucion.cadena;
     if (!Array.isArray(a.galeria)) a.galeria = [];
     if (!("imagen" in a)) a.imagen = null;
     if (!a.link || !esUrl(a.link)) a.link = "";
@@ -5144,6 +5166,7 @@ function Detail(action, ctx) {
       fila("Categoría", sinDato(action.categoria)),
       fila("Tipo de acción", sinDato(action.tipo)),
       fila("Canal", sinDato(action.canal)),
+      fila("Cadena", sinDato(action.cadena)),
       fila("Fecha", fechaCorta),
       fila("SKU", sinDato(action.sku), true)));
 
@@ -5302,7 +5325,7 @@ tr:nth-child(odd) { background: #F3F7F8; }
    EXPLORADOR
    ============================================================ */
 function Explorer(ctx) {
-  const f = { mes: "", marca: "", categoria: "", tipo: "", canal: "", ...(ctx.filtros || {}) };
+  const f = { mes: "", marca: "", categoria: "", tipo: "", canal: "", cadena: "", ...(ctx.filtros || {}) };
   let q = ctx.query || "";
   let limite = CONFIG.datos.tamanoPagina;
 
@@ -5325,6 +5348,7 @@ function Explorer(ctx) {
       if (f.categoria && a.categoria !== f.categoria) return false;
       if (f.tipo && a.tipo !== f.tipo) return false;
       if (f.canal && !a.canal.includes(f.canal)) return false;
+      if (f.cadena && !(a.cadena || []).includes(f.cadena)) return false;
       if (term) {
         const heno = [a.titulo, a.resumen, a.descripcion, a.marca, a.tipo, a.insight, a.sku, a.ubicacion, a.fuente]
           .join(" ").toLowerCase();
@@ -5457,6 +5481,7 @@ function Explorer(ctx) {
         selector("categoria", "Categoría", V.categorias),
         selector("tipo", "Tipo de acción", V.tipos),
         selector("canal", "Canal", V.canales),
+        selector("cadena", "Cadena", ["Wong", "Metro", "Plaza Vea", "Tottus"]),
         btnLimpiar,
         contador
       )
