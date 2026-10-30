@@ -2142,6 +2142,11 @@ window.RadarCatalogo = (() => {
 <style>
 .fselect:disabled{background:var(--paper-2);color:var(--ink-3);border-color:var(--line-2);opacity:.6;cursor:not-allowed}
 .select-wrap.cadena-inactiva::after{opacity:.4}
+</style><style>
+.filter-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.filter-row>.select-wrap,.filter-row>.rc-selector{flex:1 1 130px;min-width:130px}.filter-row .fselect,.filter-row .rc-disparador{width:100%;font-size:13px;padding-top:11px;padding-bottom:11px}.filter-row .result-count{margin-left:auto}.portada-aviso[aria-busy="true"]::before{content:"";display:inline-block;width:12px;height:12px;margin-right:7px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:carga-laive .8s linear infinite;vertical-align:-2px}@keyframes carga-laive{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.portada-aviso[aria-busy="true"]::before{animation:none}}
+</style><style>
+.stats-page{padding:28px clamp(18px,3vw,48px);max-width:1700px;margin:auto;color:var(--ink)}
+.stats-head,.stats-actions,.stats-filters,.stats-table-head{display:flex;align-items:center;justify-content:space-between;gap:16px}.stats-head{margin-bottom:24px;align-items:flex-start}.stats-head h1{font-size:clamp(28px,3vw,42px);margin:5px 0 8px;letter-spacing:-1px}.stats-eyebrow{font-size:11px;letter-spacing:2px;color:var(--ink-3);font-weight:700}.stats-muted{color:var(--ink-3);font-size:13px}.stats-actions{flex-shrink:0}.stats-actions a{text-decoration:none}.stats-filters{padding:16px 20px;background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:18px;flex-wrap:wrap;justify-content:flex-start}.stats-filters>span{margin-left:auto}.stats-field{display:flex;align-items:center;gap:10px;font-size:13px}.stats-field select,.stats-table-head input{border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--card);color:var(--ink);font:inherit}.stats-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:18px}.stats-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;min-width:0}.stats-kpi{display:flex;gap:16px;align-items:flex-start}.stats-kpi strong{display:block;font-size:34px;letter-spacing:-1px;line-height:1.5}.stats-kpi small{display:block;font-size:12px}.stats-icon{display:flex;padding:14px;border-radius:13px}.stats-tone-0{background:#e0f3ee;color:#00857A}.stats-tone-1{background:#e6f1fc;color:#00689a}.stats-tone-2{background:#e7f4e5;color:#238342}.stats-tone-3{background:#fff2d6;color:#986700}.stats-charts{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-bottom:18px}.stats-card h2{font-size:19px;margin:0 0 6px}.stats-bars{display:flex;height:180px;align-items:stretch;gap:10px;overflow-x:auto;padding-top:14px;margin-top:20px;background:repeating-linear-gradient(to top,transparent 0,transparent 44px,var(--line) 45px)}.stats-bar-col{min-width:28px;flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10px}.stats-bar-track{height:130px;display:flex;align-items:flex-end;width:100%;justify-content:center}.stats-bar{background:#00857A;width:min(32px,80%);border-radius:5px 5px 0 0;min-height:1px}.stats-empty{min-height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}.stats-empty p{max-width:330px;margin:0}.stats-rank{display:flex;width:100%;justify-content:space-between;align-items:center;gap:16px;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);padding:14px 0;cursor:pointer;font:inherit;font-size:13px}.stats-rank b{color:#00857A;background:#e0f3ee;padding:6px 10px;border-radius:8px}.stats-table-head{margin-bottom:18px}.stats-table-scroll{overflow:auto;max-height:430px}.stats-table-scroll table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}.stats-table-scroll th{text-align:left;background:var(--paper);padding:12px;font-weight:600;position:sticky;top:0}.stats-table-scroll td{padding:14px 12px;border-bottom:1px solid var(--line)}.stats-person{display:flex;gap:10px;align-items:center}.stats-person small{display:block;margin-top:3px;font-size:11px}.stats-avatar{background:#e0f3ee;color:#00857A;padding:10px;border-radius:50%;font-weight:700}.stats-role{padding:5px 9px;background:#e0f3ee;color:#00857A;border-radius:12px}.stats-footnote{font-size:11px;color:var(--ink-3);padding:12px;background:var(--paper);border-radius:10px;margin-bottom:0}@media(max-width:1000px){.stats-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.stats-head{flex-wrap:wrap}.stats-charts{grid-template-columns:1fr}}@media(max-width:600px){.stats-kpi{padding:14px;gap:8px}.stats-icon{padding:9px}.stats-kpi strong{font-size:26px}.stats-table-head{flex-wrap:wrap}.stats-field{width:100%;justify-content:space-between}.stats-field select{max-width:65%}}
 </style>
 </head>
 <body class="radar-sin-sesion">
@@ -2172,6 +2177,17 @@ body.radar-sin-sesion #root,body.radar-sin-sesion .skip-link{display:none!import
 <p>Acceso al radar competitivo de Laive.</p>
 </form></section>
 <button id="radar-cerrar" type="button" hidden>Cerrar sesión</button>
+<script>
+window.RadarMarcas=(()=>{
+ const clave=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[’´`']/g,'').replace(/\s*&\s*/g,'&').replace(/\s+/g,' ').trim();
+ const nombres=['Laive','Gloria','Bonlé','Braedt','Otto Kunz','San Fernando','Redondos','Razzeto','Casa Europa','Danlac','Yoleit','Vakimu','Ideal','Nestlé','La Preferida','P&G','Head & Shoulders',"Lay’s",'D’Kasa'];
+ const canon=new Map(nombres.map(x=>[clave(x),x]));
+ [['lays','Lay’s'],['d kasa','D’Kasa'],['head & shoulder','Head & Shoulders']].forEach(([k,v])=>canon.set(clave(k),v));
+ function lista(s){return [...new Set((Array.isArray(s)?s:String(s||'').split(/\s*(?:\/|;|,|\||\n)\s*/)).map(x=>String(x).trim()).filter(Boolean))];}
+ function normalizar(s){const k=clave(s);if(!canon.has(k))canon.set(k,String(s).trim().replace(/\s+/g,' '));return canon.get(k);}
+ return {clave,lista,normalizar};
+})();
+</script>
 <script>
 window.RadarAcceso = (() => {
   const URL_API = 'https://script.google.com/macros/s/AKfycbwr5oJScjmsiP5fFz4dheXQq9Z8lD4dtMPUchGbIcc7-WOBeXVJGLl1M3L7UFE6MS8/exec';
@@ -2292,10 +2308,12 @@ window.RadarAcceso = (() => {
     if (!d.ok) throw new Error(d.mensaje || 'No se pudo completar la operación de portada.');
     return d;
   }
-  return Object.freeze({listo,validar,registros,activa:()=>!!token,usuario:()=>usuario,nombre:()=>nombre,rol:()=>rol,editor:()=>!!token&&rol==='editor',
+  return Object.freeze({listo,validar,registros,estadisticasPermitidas:()=>!!token&&rol==='editor',activa:()=>!!token,usuario:()=>usuario,nombre:()=>nombre,rol:()=>rol,editor:()=>!!token&&rol==='editor',
     prepararPortada:id=>portada('prepararPortada',{id}),
     guardarPortada:guardarFoto,
     guardarEncuadre:datos=>portada('guardarEncuadre',datos),
+    registrarUso:datos=>solicitud(Object.assign({},datos,{accion:'registrarUso',token})),
+    estadisticas:()=>solicitud({accion:'estadisticas',token}),
     crearAccion:datos=>portada('crearAccion',datos)});
 })();
 </script>
@@ -3606,6 +3624,7 @@ function construirDataset(filas, config) {
       sku: campo(fila, mapa, ["SKU involucrado", "SKU"]) || "—",
       canal: splitList(campo(fila, mapa, ["Canal", "Canales"])),
       cadena: splitList(campo(fila, mapa, ["Cadena"])),
+      giro: campo(fila, mapa, ["Giro de negocio", "Giro"]),
       ubicacion: campo(fila, mapa, ["Ubicación", "Ubicacion"]) || "—",
       fuente: campo(fila, mapa, ["Fuente"]) || "—",
       insight: campo(fila, mapa, ["Insight", "Insight estratégico", "Insight estrategico"]),
@@ -3641,10 +3660,21 @@ function finalizar(data) {
   data.months = data.months || [];
   data.categorias = data.categorias || [];
 
+  const originales = data.brands;
+  data.brands = {};
+  // Una acción conserva todas sus marcas; cada nombre tiene una sola identidad.
+  data.actions.forEach(a => {
+    a.marcas = window.RadarMarcas.lista(a.marca || "Sin marca").map(window.RadarMarcas.normalizar);
+    a.marcas = [...new Set(a.marcas)];
+    a.marcas.forEach(m => { const previo = originales[m] || Object.entries(originales).find(([k]) => window.RadarMarcas.clave(k) === window.RadarMarcas.clave(m))?.[1];
+      if(!data.brands[m]) data.brands[m] = {...(previo || {}),name:m,hue:previo?.hue ?? hueFor(m),grupo:previo?.grupo || a.grupo || ""}; });
+    a.marca = a.marcas.join(" / ");
+    a.giros = window.RadarMarcas.lista(a.giro || "Por identificar");
+  });
   // Reconstruye marcas faltantes (protege al Detalle de un acceso a undefined)
   data.actions.forEach(a => {
     if (!a.marca) a.marca = "Sin marca";
-    if (!data.brands[a.marca]) data.brands[a.marca] = { hue: hueFor(a.marca), name: a.marca, grupo: "" };
+    // Las claves de marca se crean individualmente, nunca como opción combinada.
     if (!Array.isArray(a.canal)) a.canal = splitList(a.canal);
     const distribucion = window.RadarCatalogo.distribucion(a.canal, a.cadena);
     a.canal = distribucion.canal;
@@ -3655,6 +3685,7 @@ function finalizar(data) {
     if (!a.estado) a.estado = "Publicado";
   });
 
+  data.giros = [...new Set(data.actions.flatMap(a=>a.giros))].sort((a,b)=>a.localeCompare(b,"es"));
   data.tipos = Array.from(new Set(data.actions.map(a => a.tipo).filter(Boolean))).sort();
   data.canales = Array.from(new Set(data.actions.flatMap(a => a.canal))).sort();
   data.subcategorias = Array.from(new Set(data.actions.map(a => a.subcategoria).filter(Boolean))).sort();
@@ -3967,6 +3998,7 @@ function BrandLabel(marca) {
 function ActionCard(action, onOpen, index = 0, onPortada = null) {
   const card = h("article", {
     class: "card" + (esNuevo(action) ? " es-nuevo" : ""),
+    "data-accion-id": String(action.id),
     tabindex: "0",
     role: "button",
     "aria-label": `Ver ficha: ${action.titulo}`,
@@ -4054,7 +4086,7 @@ const VISTAS_NAV = [
   { k: "insights", l: "Insights", i: "chart" },
   { k: "compare", l: "Comparador", i: "compare" }
 ];
-const tituloVista = k => k === "nueva" ? "Nueva acción" : (VISTAS_NAV.find(v => v.k === k) || VISTAS_NAV[0]).l;
+const tituloVista = k => k === "estadisticas" ? "Estadísticas de uso" : k === "nueva" ? "Nueva acción" : (VISTAS_NAV.find(v => v.k === k) || VISTAS_NAV[0]).l;
 
 function iniciales(txt) {
   const p = String(txt || "?").replace(/[^\p{L}\p{N}\s]/gu, " ").trim().split(/\s+/).filter(Boolean);
@@ -4090,6 +4122,7 @@ function Sidebar(ctx) {
       h("div", { class: "side-grupo", text: "Navegación" }),
       ...VISTAS_NAV.map(v => item(v.k, v.l, v.i,
         v.k === "explorer" && total ? h("span", { class: "side-badge", text: String(total) }) : null)),
+      window.RadarAcceso.estadisticasPermitidas() ? item("estadisticas", "Estadísticas de uso", "chart") : null,
       editor ? h("div", { class: "side-grupo", text: "Registro" }) : null,
       editor ? h("button", { class: "side-item cta" + (ctx.view === "nueva" ? " activo-cta" : ""), title: "Nueva acción",
         onclick: () => { ctx.cerrarMenu(); ctx.nuevaAccion(); } },
@@ -4186,7 +4219,7 @@ function saludo() {
 
 function conteo(lista, fn) {
   const c = {};
-  lista.forEach(a => [].concat(fn(a)).filter(Boolean).forEach(k => { c[k] = (c[k] || 0) + 1; }));
+  lista.forEach(a => { const valor=fn(a); const claves=valor===a.marca && a.marcas ? a.marcas : [].concat(valor); [...new Set(claves.filter(Boolean))].forEach(k => { c[k] = (c[k] || 0) + 1; }); });
   return Object.entries(c).map(([k, n]) => ({ k, n })).sort((x, y) => y.n - x.n || x.k.localeCompare(y.k, "es"));
 }
 
@@ -4340,8 +4373,8 @@ const claseDelta = d => d > 0 ? "up" : d < 0 ? "down" : "";
 function abrirPanelMarca(marca, P, ctx) {
   const prevPanel = document.querySelector(".bd-overlay");
   if (prevPanel) prevPanel.remove();
-  const suyas = P.acts.filter(a => a.marca === marca);
-  const antes = P.prev.filter(a => a.marca === marca);
+  const suyas = P.acts.filter(a => (a.marcas || [a.marca]).includes(marca));
+  const antes = P.prev.filter(a => (a.marcas || [a.marca]).includes(marca));
   const d = P.previos.length ? suyas.length - antes.length : null;
   const share = pctDe(suyas.length, P.actsComp.length);
   const meta = V.brands[marca] || {};
@@ -4417,7 +4450,7 @@ function Home(ctx) {
   const porCanal = conteo(acts, canalesDe);
   const top = porMarca[0];
   const delta = P.previos.length ? acts.length - P.prev.length : null;
-  const marcasPrev = new Set(P.prevComp.map(a => a.marca)).size;
+  const marcasPrev = new Set(P.prevComp.flatMap(a => a.marcas || [a.marca])).size;
 
   /* ---------- Cabecera con lectura ejecutiva ---------- */
   const nombre = ctx.usuarioNombre;
@@ -4606,15 +4639,15 @@ function calor(n, max) {
 
 /* Filtros de Insights (se conservan mientras dure la sesión) */
 const filtroIns = { marca: "", categoria: "" };
-const pasaFiltroIns = a => (!filtroIns.marca || a.marca === filtroIns.marca) && (!filtroIns.categoria || a.categoria === filtroIns.categoria);
+const pasaFiltroIns = a => (!filtroIns.marca || (a.marcas || [a.marca]).includes(filtroIns.marca)) && (!filtroIns.categoria || a.categoria === filtroIns.categoria);
 
 function FiltrosInsights(ctx, P) {
   const base = V.actions.filter(a => !esLaive(a.marca));
-  const marcas = [...new Set(base.filter(a => !filtroIns.categoria || a.categoria === filtroIns.categoria).map(a => a.marca))].sort((a, b) => a.localeCompare(b, "es"));
-  const cats = [...new Set(base.filter(a => !filtroIns.marca || a.marca === filtroIns.marca).map(a => a.categoria))].sort((a, b) => a.localeCompare(b, "es"));
+  const marcas = [...new Set(base.filter(a => !filtroIns.categoria || a.categoria === filtroIns.categoria).flatMap(a => a.marcas || [a.marca]))].sort((a, b) => a.localeCompare(b, "es"));
+  const cats = [...new Set(base.filter(a => !filtroIns.marca || (a.marcas || [a.marca]).includes(filtroIns.marca)).map(a => a.categoria))].sort((a, b) => a.localeCompare(b, "es"));
   const rerender = () => ctx.setRango(P.keys[P.iD], P.keys[P.iH]);
   const sel = (k, etq, todas, ops) => {
-    const s = h("select", { "aria-label": etq, class: filtroIns[k] ? "set" : "", onchange: e => { filtroIns[k] = e.target.value; rerender(); } },
+    const s = h("select", { "aria-label": etq, class: filtroIns[k] ? "set" : "", onchange: e => { filtroIns[k] = e.target.value; if(k==="categoria" && filtroIns.marca && !base.some(a=>a.categoria===filtroIns.categoria && (a.marcas || [a.marca]).includes(filtroIns.marca)))filtroIns.marca=""; rerender(); } },
       h("option", { value: "", text: todas }), ...ops.map(o => h("option", { value: o, text: o })));
     s.value = filtroIns[k];
     return h("label", {}, h("span", { text: etq }), s);
@@ -4622,8 +4655,8 @@ function FiltrosInsights(ctx, P) {
   const activos = !!(filtroIns.marca || filtroIns.categoria);
   return h("div", { class: "ins-filtros" },
     h("span", { class: "ins-filtros-t" }, I("layers", 16), "Filtrar análisis"),
+    sel("categoria", "Categoría", "Todas las categorías", [...new Set(base.map(a=>a.categoria))].sort()),
     sel("marca", "Marca", "Todas las marcas", marcas),
-    sel("categoria", "Categoría", "Todas las categorías", cats),
     activos ? h("button", { class: "ins-limpiar", onclick: () => { filtroIns.marca = ""; filtroIns.categoria = ""; rerender(); } }, I("close", 14), "Limpiar filtros") : null,
     activos ? h("span", { class: "ins-filtros-nota", text: "Todos los gráficos e indicadores muestran solo " + [filtroIns.marca, filtroIns.categoria].filter(Boolean).join(" · ") }) : null);
 }
@@ -4641,7 +4674,8 @@ function Insights(ctx) {
   const grupoDe = a => (a.grupo && a.grupo !== "—" ? a.grupo : (V.brands[a.marca] && V.brands[a.marca].grupo) || a.marca);
   const porGrupo = conteo(actsComp, grupoDe);
   const lanz = actsComp.filter(esLanz).length;
-  const top3 = porMarca.slice(0, 3).reduce((s, x) => s + x.n, 0);
+  const lideres3 = new Set(porMarca.slice(0, 3).map(x=>x.k));
+  const top3 = actsComp.filter(a=>(a.marcas || [a.marca]).some(m=>lideres3.has(m))).length;
   const lect = (txt, badge) => Lectura(txt, badge);
   const panel = (cls, titulo, meta, cuerpo, lectura) => h("section", { class: "blk ins-p " + cls },
     h("div", { class: "blk-cab" }, h("span", { class: "eyebrow", text: titulo }), meta ? h("span", { class: "meta", text: meta }) : null),
@@ -4669,7 +4703,7 @@ function Insights(ctx) {
   const catsH = porCat.slice(0, 5).map(x => x.k);
   const celda = {};
   let maxC = 1, hot = null;
-  actsComp.forEach(a => { const k = a.marca + "|" + a.categoria; celda[k] = (celda[k] || 0) + 1; });
+  actsComp.forEach(a => (a.marcas || [a.marca]).forEach(m => { const k = m + "|" + a.categoria; celda[k] = (celda[k] || 0) + 1; }));
   marcasH.forEach(m => catsH.forEach(c => { const n = celda[m + "|" + c] || 0; if (n > maxC) maxC = n; if (!hot || n > hot.n) hot = { m, c, n }; }));
   const heat = marcasH.length ? h("div", { class: "heat", style: { gridTemplateColumns: `minmax(110px,1.3fr) repeat(${catsH.length}, minmax(0,1fr))` } },
     h("span", {}), ...catsH.map(c => h("span", { class: "heat-col", "data-tip": `${c}: ${(porCat.find(z => z.k === c) || { n: 0 }).n} acciones en total`, text: c })),
@@ -4678,7 +4712,7 @@ function Insights(ctx) {
       ...catsH.map(c => { const n = celda[m + "|" + c] || 0;
         const tm = (porMarca.find(z => z.k === m) || { n: 1 }).n;
         return h("button", { class: "heat-c", style: calor(n, maxC),
-          "data-tip": `${m} en ${c}: ${n} ${n === 1 ? "acción" : "acciones"}` + (n ? `\n${pctDe(n, tm)}% de la actividad de ${m}` + `\nTipos: ` + conteo(actsComp.filter(a => a.marca === m && a.categoria === c), a => a.tipo).map(z => `${z.k} (${z.n})`).join(", ") : ""),
+          "data-tip": `${m} en ${c}: ${n} ${n === 1 ? "acción" : "acciones"}` + (n ? `\n${pctDe(n, tm)}% de la actividad de ${m}` + `\nTipos: ` + conteo(actsComp.filter(a => (a.marcas || [a.marca]).includes(m) && a.categoria === c), a => a.tipo).map(z => `${z.k} (${z.n})`).join(", ") : ""),
           onclick: () => n && ctx.go("explorer", { ...P.filtroMes, marca: m, categoria: c }), text: n ? String(n) : "·" }); })
     ])) : h("p", { class: "impl-vacio", text: "Sin datos en el período." });
   const p1 = panel("ins-heat", "Presión por marca y categoría", "acciones", heat,
@@ -4691,7 +4725,7 @@ function Insights(ctx) {
   const topT = conteo(compT, a => a.marca).slice(0, 4).map(x => x.k);
   const serie = mesesT.map(k => {
     const del = compT.filter(a => a.mes === k);
-    const partes = topT.map(m => ({ m, n: del.filter(a => a.marca === m).length }));
+    const partes = topT.map(m => ({ m, n: del.filter(a => (a.marcas || [a.marca]).includes(m)).length }));
     partes.push({ m: "Otras", n: del.length - partes.reduce((s, x) => s + x.n, 0) });
     return { k, total: del.length, partes };
   });
@@ -5172,6 +5206,7 @@ function Detail(action, ctx) {
       fila("Tipo de acción", sinDato(action.tipo)),
       fila("Canal", sinDato(action.canal)),
       fila("Cadena", sinDato(action.cadena)),
+      fila("Giro de negocio", sinDato(action.giros || action.giro) || "Por identificar"),
       fila("Fecha", fechaCorta),
       fila("SKU", sinDato(action.sku), true)));
 
@@ -5330,9 +5365,9 @@ tr:nth-child(odd) { background: #F3F7F8; }
    EXPLORADOR
    ============================================================ */
 function Explorer(ctx) {
-  const f = { mes: "", marca: "", categoria: "", tipo: "", canal: "", cadena: "", ...(ctx.filtros || {}) };
+  const f = { mes: "", marca: "", categoria: "", tipo: "", canal: "", cadena: "", giro: "", ...(ctx.filtros || {}) };
   let q = ctx.query || "";
-  let limite = CONFIG.datos.tamanoPagina;
+  let limite = Math.max(CONFIG.datos.tamanoPagina, ctx.explorerLimite || 0);
 
   const grid = h("div", { class: "grid", id: "grid-resultados" });
   const contador = h("span", { class: "result-count" });
@@ -5349,11 +5384,12 @@ function Explorer(ctx) {
     const term = q.trim().toLowerCase();
     return V.actions.filter(a => {
       if (f.mes && a.mes !== f.mes) return false;
-      if (f.marca && a.marca !== f.marca) return false;
+      if (f.marca && !(a.marcas || [a.marca]).includes(f.marca)) return false;
       if (f.categoria && a.categoria !== f.categoria) return false;
       if (f.tipo && a.tipo !== f.tipo) return false;
       if (f.canal && !a.canal.includes(f.canal)) return false;
       if (f.cadena && !(a.cadena || []).includes(f.cadena)) return false;
+      if (f.giro && !(a.giros || []).includes(f.giro)) return false;
       if (term) {
         const heno = [a.titulo, a.resumen, a.descripcion, a.marca, a.tipo, a.insight, a.sku, a.ubicacion, a.fuente]
           .join(" ").toLowerCase();
@@ -5364,6 +5400,7 @@ function Explorer(ctx) {
   }
 
   function pintar(conEscaneo) {
+    ctx.setExplorerLimite(limite);
     const res = filtrar();
     contador.textContent = `${res.length} ${res.length === 1 ? "resultado" : "resultados"}`;
     grid.textContent = "";
@@ -5393,11 +5430,26 @@ function Explorer(ctx) {
     barra.querySelectorAll("select").forEach(s => { s.value = ""; s.classList.remove("set"); s.dispatchEvent(new Event("radar:limpiar")); });
     actualizarLimpiar();
     actualizarCadena();
+    actualizarMarcas(); actualizarGiros();
     ctx.setFiltros({}, "");
     pintar(true);
   }
 
-  let selectorCadena = null;
+  let selectorCadena = null, selectorMarca = null, selectorGiro = null;
+  function actualizarMarcas() {
+    if(!selectorMarca)return;
+    const opciones=[...new Set(V.actions.filter(a=>!f.categoria || a.categoria===f.categoria).flatMap(a=>a.marcas || [a.marca]))].sort((a,b)=>a.localeCompare(b,"es"));
+    if(!opciones.includes(f.marca))f.marca="";
+    selectorMarca.replaceChildren(h('option',{value:'',text:'Marca'}),...opciones.map(m=>h('option',{value:m,text:m})));
+    selectorMarca.value=f.marca;selectorMarca.classList.toggle('set',!!f.marca);
+  }
+  function actualizarGiros() {
+    if(!selectorGiro)return;
+    const opciones=[...new Set(V.actions.filter(a=>!f.canal || a.canal.includes(f.canal)).flatMap(a=>a.giros || []))].sort((a,b)=>a.localeCompare(b,"es"));
+    if(!opciones.includes(f.giro))f.giro="";
+    selectorGiro.replaceChildren(h('option',{value:'',text:'Giro de negocio'}),...opciones.map(g=>h('option',{value:g,text:g})));
+    selectorGiro.value=f.giro;selectorGiro.classList.toggle('set',!!f.giro);
+  }
   function actualizarCadena() {
     if (!selectorCadena) return;
     const disponibles = [...new Set(V.actions.filter(a => !f.canal || a.canal.includes(f.canal)).flatMap(a => a.cadena || []))].sort();
@@ -5416,7 +5468,8 @@ function Explorer(ctx) {
       class: "fselect" + (f[k] ? " set" : ""), "aria-label": label, value: f[k],
       onchange: e => {
         f[k] = e.target.value;
-        if (k === "canal") actualizarCadena();
+        if (k === "canal") { actualizarCadena(); actualizarGiros(); }
+        if (k === "categoria") actualizarMarcas();
         e.target.classList.toggle("set", !!e.target.value);
         limite = CONFIG.datos.tamanoPagina;
         actualizarLimpiar();
@@ -5429,6 +5482,8 @@ function Explorer(ctx) {
     );
     sel.value = f[k] || "";
     if (k === "cadena") selectorCadena = sel;
+    if (k === "marca") selectorMarca = sel;
+    if (k === "giro") selectorGiro = sel;
     if (k !== 'tipo' && k !== 'categoria') return h("div", { class: "select-wrap" }, sel);
     sel.hidden=true;sel.tabIndex=-1;sel.setAttribute('aria-hidden','true');
     const uid='filtro-'+k;
@@ -5499,10 +5554,11 @@ function Explorer(ctx) {
       ),
       h("div", { class: "filter-row" },
         selector("mes", "Mes", V.months.map(m => ({ v: m.key, l: `${m.label} ${m.year}` }))),
-        selector("marca", "Marca", Object.keys(V.brands)),
         selector("categoria", "Categoría", V.categorias),
+        selector("marca", "Marca", Object.keys(V.brands)),
         selector("tipo", "Tipo de acción", V.tipos),
         selector("canal", "Canal", V.canales),
+        selector("giro", "Giro de negocio", V.giros),
         selector("cadena", "Cadena", ["Wong", "Metro", "Plaza Vea", "Tottus"]),
         btnLimpiar,
         contador
@@ -5511,6 +5567,7 @@ function Explorer(ctx) {
   );
 
   actualizarCadena();
+  actualizarMarcas(); actualizarGiros();
 
   const vista = h("div", { class: "view" }, barra, zonaResultados, h("div", { class: "shell centrado" }, btnMas));
 
@@ -5787,7 +5844,7 @@ function abrirEditorPortada(action, alGuardar) {
     }catch(error){aviso.textContent=error.message+' Si aún no actualizaste Apps Script, instala primero PruebaAcceso.gs.';}
     finally{guardando=false;guardar.disabled=!lista;modo.disabled=false;cambiar.disabled=false;arriba.disabled=false;restablecer.disabled=false;pintar();}
   });
-  function cerrar(){if(guardando)return;document.removeEventListener('keydown',tecla,true);document.body.style.overflow=anterior;caja.remove();if(foco&&foco.isConnected)foco.focus();}
+  function cerrar(){if(guardando)return;document.removeEventListener('keydown',tecla,true);document.body.style.overflow=anterior;caja.remove();if(foco&&foco.isConnected)foco.focus({preventScroll:true});}
   function tecla(e){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cerrar();}}
   const caja=h('div',{class:'portada-overlay'},h('div',{class:'portada-panel enc-panel',role:'dialog','aria-modal':'true','aria-label':'Ajustar tarjeta'},
     h('div',{class:'portada-head'},h('div',{},h('div',{class:'eyebrow',text:'Solo cambia la presentación en Radar'}),h('h3',{text:'Ajustar tarjeta'})),h('button',{class:'icon-btn','aria-label':'Cerrar',onclick:cerrar},I('close',18))),
@@ -5795,7 +5852,7 @@ function abrirEditorPortada(action, alGuardar) {
       h('section',{class:'enc-ajustes'},h('span',{class:'badge',text:'Original protegido'}),h('p',{text:'Mueve la foto con el mouse o el dedo. El encuadre se aplica a la tarjeta; la imagen del detalle y el archivo de OneDrive conservan la foto completa.'}),h('label',{class:'campo'},h('span',{text:'Visualización'}),modo),
       ...[[zoom,'Zoom'],[horizontal,'Horizontal'],[vertical,'Vertical']].map(([input,text])=>h('label',{class:'campo'},h('span',{text}),input)),h('div',{class:'rf-botones'},arriba,restablecer),guardar,aviso,
       h('div',{class:'enc-reemplazo'},h('b',{text:'¿Quieres usar otra fotografía?'}),h('p',{text:'Esta opción sí reemplaza el archivo original en OneDrive.'}),cambiar)))));
-  caja.addEventListener('click',e=>{if(e.target===caja)cerrar();});document.body.style.overflow='hidden';document.body.appendChild(caja);document.addEventListener('keydown',tecla,true);pintar();vista.focus();
+  caja.addEventListener('click',e=>{if(e.target===caja)cerrar();});document.body.style.overflow='hidden';document.body.appendChild(caja);document.addEventListener('keydown',tecla,true);pintar();vista.focus({preventScroll:true});
   if(img.complete&&img.naturalWidth){lista=true;guardar.disabled=false;}
   return caja;
 }
@@ -5807,9 +5864,9 @@ function abrirReemplazoPortada(action,alGuardar){
   const aviso=h('p',{class:'portada-aviso',role:'status'});
   const guardar=h('button',{type:'button',class:'btn',disabled:true,text:action.imagen?'Reemplazar original en OneDrive':'Subir foto original a OneDrive'});
   input.addEventListener('change',()=>{guardar.disabled=true;aviso.textContent='';const f=input.files[0];if(!f)return;if(!['image/jpeg','image/png'].includes(f.type)||f.size>3*1048576){aviso.textContent='Usa un JPG o PNG de hasta 3 MB. El archivo se guarda completo, sin recortar ni recomprimir.';return;}if(objeto)URL.revokeObjectURL(objeto);objeto=URL.createObjectURL(f);vista.src=objeto;vista.hidden=false;guardar.disabled=false;});
-  guardar.addEventListener('click',async()=>{if(guardando||!input.files[0])return;guardando=true;guardar.disabled=input.disabled=true;
-    try{const f=input.files[0];const dataBase64=await leerOriginalRadar(f);const res=await window.RadarAcceso.guardarPortada({id:action.id,mimeType:f.type,dataBase64});const anteriorFoto=action.imagen;if(res.url){action.imagen=res.url;action.galeria=[res.url,...(action.galeria||[]).filter(x=>x!==anteriorFoto&&x!==res.url)];}action.encuadreTarjeta=null;guardando=false;cerrar();if(alGuardar)alGuardar(action,res.url);toast(res.mensaje||'Foto original guardada.','ok');}
-    catch(e){aviso.textContent=e.message;}finally{guardando=false;guardar.disabled=input.disabled=false;}
+  guardar.addEventListener('click',async()=>{if(guardando||!input.files[0])return;guardando=true;guardar.disabled=input.disabled=true;aviso.setAttribute('aria-busy','true');aviso.textContent='Preparando foto…';guardar.textContent='Guardando…';
+    try{const f=input.files[0];const dataBase64=await leerOriginalRadar(f);aviso.textContent='Subiendo foto y confirmando enlace en Excel…';const res=await window.RadarAcceso.guardarPortada({id:action.id,mimeType:f.type,dataBase64});const anteriorFoto=action.imagen;if(res.url){action.imagen=res.url;action.galeria=[res.url,...(action.galeria||[]).filter(x=>x!==anteriorFoto&&x!==res.url)];}action.encuadreTarjeta=null;guardando=false;cerrar();if(alGuardar)alGuardar(action,res.url);toast(res.enlacePendiente?'Foto guardada; falta confirmar el enlace en Excel.':(res.mensaje||'Foto y enlace guardados.'),res.enlacePendiente?'error':'ok');}
+    catch(e){aviso.textContent=e.message;}finally{guardando=false;guardar.disabled=input.disabled=false;aviso.setAttribute('aria-busy','false');guardar.textContent=action.imagen?'Reemplazar original en OneDrive':'Subir foto original a OneDrive';}
   });
   function cerrar(){if(guardando)return;if(objeto)URL.revokeObjectURL(objeto);document.removeEventListener('keydown',tecla,true);document.body.style.overflow=anterior;caja.remove();}
   function tecla(e){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cerrar();}}
@@ -6098,12 +6155,13 @@ const UI = __M_ui;
 const Anim = __M_animations;
 const { montarCaptura } = __M_capture;
 
-const VISTAS = ["home", "explorer", "timeline", "insights", "compare", "nueva"];
+const VISTAS = ["home", "explorer", "timeline", "insights", "compare", "nueva", "estadisticas"];
 
 const estado = {
   view: "home",
   filtros: {},
   query: "",
+  explorerLimite: CONFIG.datos.tamanoPagina,
   focusMonth: "",
   compareA: "",
   compareB: "",
@@ -6183,7 +6241,36 @@ function leerHash() {
   return { partes, params };
 }
 
-function aplicarHash() {
+// La ruta base y la posición pertenecen a la vista, no al modal de la ficha.
+let rutaVistaActual = null;
+let retornoDetalle = null;
+let restauracionScroll = 0;
+function posicionVista() {
+  return { x: window.scrollX || 0, y: window.scrollY || 0 };
+}
+function recordarRetornoDetalle() {
+  if (retornoDetalle) return;
+  retornoDetalle = {
+    hash: rutaVistaActual || "#/explorer",
+    posicion: posicionVista(),
+    foco: document.activeElement,
+    id: null,
+    volverConHistorial: !!rutaVistaActual
+  };
+}
+function restaurarVista(posicion, foco, id) {
+  const turno = ++restauracionScroll;
+  const aplicar = () => {
+    if (turno !== restauracionScroll) return;
+    const destino = foco && foco.isConnected ? foco :
+      (id ? [...document.querySelectorAll('.card[data-accion-id]')].find(c => c.dataset.accionId === String(id)) : null);
+    if (destino && destino.focus) destino.focus({ preventScroll: true });
+    window.scrollTo({ left: posicion.x, top: posicion.y, behavior: "instant" });
+  };
+  aplicar();
+  requestAnimationFrame(() => { aplicar(); requestAnimationFrame(aplicar); });
+}
+function aplicarHash(opciones = {}) {
   if(window.RadarFotos && window.RadarFotos.ocupada()) return;
   cerrarMenu();
   const { partes, params } = leerHash();
@@ -6192,25 +6279,40 @@ function aplicarHash() {
   if (primero === "accion" && partes[1]) {
     const encontrada = V && V.actions.find(a => String(a.id) === decodeURIComponent(partes[1]));
     if (encontrada) {
+      if (vistaPintada && !retornoDetalle) recordarRetornoDetalle();
       estado.detalle = encontrada;
       if (!vistaPintada) render(); else renderDetalle();
       return;
     }
   }
 
+  const ruta = location.hash || "#/home";
+  const mismaVista = vistaPintada && rutaVistaActual === ruta;
+  const retorno = retornoDetalle;
   estado.detalle = null;
   cerrarDetalle();
 
+  // Cerrar la ficha no desmonta el Explorador: conserva filtros, búsqueda,
+  // tarjetas ya cargadas y el mismo nodo al que vuelve el foco.
+  if (mismaVista && !opciones.refrescar) {
+    retornoDetalle = null;
+    if (retorno) restaurarVista(retorno.posicion, retorno.foco, retorno.id);
+    return;
+  }
   estado.view = VISTAS.includes(primero) ? primero : "home";
-  estado.filtros = {};
-  ["marca", "categoria", "tipo", "canal", "mes"].forEach(k => {
-    const v = params.get(k);
-    if (v) estado.filtros[k] = v;
-  });
-  estado.query = params.get("q") || "";
+  if (!mismaVista) {
+    estado.filtros = {};
+    ["marca", "categoria", "tipo", "canal", "mes", "cadena", "giro"].forEach(k => {
+      const v = params.get(k);
+      if (v) estado.filtros[k] = v;
+    });
+    estado.query = params.get("q") || "";
+    estado.explorerLimite = CONFIG.datos.tamanoPagina;
+  }
   if (partes[0] === "timeline" && partes[1]) estado.focusMonth = partes[1];
-
-  render();
+  rutaVistaActual = ruta;
+  render({ conservarPosicion: mismaVista, posicion: retorno && retorno.posicion });
+  retornoDetalle = null;
 }
 
 function navegar(vista, filtros) {
@@ -6231,6 +6333,7 @@ const ctx = {
   get origen() { return API.estadoFuente.origen; },
   get filtros() { return estado.filtros; },
   get query() { return estado.query; },
+  get explorerLimite() { return estado.explorerLimite; },
   get focusMonth() { return estado.focusMonth || (V && V.currentMonth) || ""; },
   get compareA() { return estado.compareA; },
   get compareB() { return estado.compareB; },
@@ -6241,8 +6344,16 @@ const ctx = {
   get usuarioCorreo() { return (window.RadarAcceso.usuario && window.RadarAcceso.usuario()) || ""; },
 
   go: (vista, filtros) => navegar(vista, filtros),
-  onOpen: accion => { estado.detalle = accion; location.hash = `#/accion/${encodeURIComponent(accion.id)}`; },
-  onClose: () => { history.back(); },
+  onOpen: accion => {
+    recordarRetornoDetalle();
+    retornoDetalle.id = accion.id;
+    estado.detalle = accion;
+    location.hash = `#/accion/${encodeURIComponent(accion.id)}`;
+  },
+  onClose: () => {
+    if (retornoDetalle && retornoDetalle.volverConHistorial) history.back();
+    else navegar("explorer");
+  },
   onPortada: (accion, tarjeta) => UI.abrirEditorPortada(accion, () => {
     if (!tarjeta) return;
     const posterViejo = tarjeta.querySelector(".poster");
@@ -6259,6 +6370,7 @@ const ctx = {
   setRango: (desde, hasta) => { estado.rangoDesde = desde; estado.rangoHasta = hasta; render(); },
   sincronizar: () => sincronizar(true),
   setFiltros: (f, q) => { estado.filtros = { ...f }; estado.query = q; },
+  setExplorerLimite: limite => { estado.explorerLimite = limite; },
   setFocusMonth: mes => { estado.focusMonth = mes; render(); },
   setCompare: (a, b) => { estado.compareA = a; estado.compareB = b; },
   registrarRadar: r => { radarActivo = r; },
@@ -6285,9 +6397,12 @@ function renderChrome() {
 let capturaActual = null;
 
 let vistaPintada = false;   // true cuando la vista principal ya se dibujó con datos
-function render() {
+function render(opciones = {}) {
   const cont = root();
   if (!cont) return;
+  const posicion = opciones.conservarPosicion
+    ? (opciones.posicion || (retornoDetalle && retornoDetalle.posicion) || posicionVista()) : null;
+  ++restauracionScroll;
   vistaPintada = !estado.cargando && !estado.error;
   liberarVista();
   cont.textContent = "";
@@ -6308,6 +6423,7 @@ function render() {
   } else {
     let vista;
     switch (estado.view) {
+      case "estadisticas": vista = window.RadarEstadisticas.vista(ctx,V.actions); break;
       case "explorer": vista = UI.Explorer(ctx); break;
       case "timeline": vista = UI.Timeline(ctx); break;
       case "insights": vista = UI.Insights(ctx); break;
@@ -6334,12 +6450,14 @@ function render() {
   cont.appendChild(app);
 
   if (estado.detalle) renderDetalle();
-  window.scrollTo({ top: 0, behavior: Anim.movimientoActivo() ? "smooth" : "auto" });
+  if (posicion) restaurarVista(posicion);
+  else window.scrollTo({ top: 0, behavior: "instant" });
 }
 
 let overlayDetalle = null;
 function renderDetalle() {
   if (!estado.detalle || !V) return;
+  const scrollFicha = overlayDetalle ? overlayDetalle.scrollTop : 0;
   cerrarDetalle();
   overlayDetalle = UI.Detail(estado.detalle, ctx);
   document.body.appendChild(overlayDetalle);
@@ -6348,7 +6466,8 @@ function renderDetalle() {
   document.addEventListener("keydown", onKey);
   overlayDetalle.__onKey = onKey;
   const cerrar = overlayDetalle.querySelector(".detail-close");
-  if (cerrar) cerrar.focus();
+  if (cerrar) cerrar.focus({ preventScroll: true });
+  overlayDetalle.scrollTop = scrollFicha;
 }
 
 function cerrarDetalle() {
@@ -6387,7 +6506,7 @@ async function sincronizar(forzar) {
       estado.compareB = V.months[V.months.length - 1].key;
     }
     estado.cargando = false;
-    aplicarHash();
+    aplicarHash({ refrescar: true });
     // Edición y carga de fotos desactivadas en esta fase de lectura.
     if (radarActivo) radarActivo.emitirOnda();
     if (forzar) {
@@ -6428,6 +6547,8 @@ window.addEventListener('radar:salida', () => {
   V = null;
   UI.setDataset(API.finalizar({actions:[],brands:{},months:[],categorias:[]}));
   estado.detalle = null;
+  retornoDetalle = null; rutaVistaActual = null; ++restauracionScroll;
+  estado.explorerLimite = CONFIG.datos.tamanoPagina;
   estado.focusMonth = ''; estado.compareA = ''; estado.compareB = ''; estado.rangoDesde = ''; estado.rangoHasta = '';
   estado.cargando = false; estado.error = null;
   API.invalidarCache();
@@ -6435,7 +6556,7 @@ window.addEventListener('radar:salida', () => {
   vistaPintada = false;
   Anim.barridoSync(false);
 });
-window.addEventListener('radar:fotos-actualizadas',()=>{if(V){UI.setDataset(V);render();}});
+window.addEventListener('radar:fotos-actualizadas',()=>{if(V){UI.setDataset(V);render({ conservarPosicion: true });}});
 window.addEventListener('radar:ingreso', () => {
   if (iniciado) sincronizar(true);
 });
@@ -6447,6 +6568,7 @@ async function iniciar() {
   aplicarPanel(panelInicial());
   document.addEventListener("keydown", e => { if (e.key === "Escape") cerrarMenu(); });
   Anim.init();
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   window.addEventListener("hashchange", aplicarHash);
   window.addEventListener("beforeunload", () => { liberarVista(); });
   sincronizar(false);
@@ -6482,6 +6604,53 @@ return {  };
 
 })();
   </script>
+<script>
+// Medición aproximada: pestaña visible + actividad en el último minuto.
+(()=>{
+ let visita='',segundos=0,fichas=[],ultimo=Date.now(),tick=Date.now(),secuencia=0,enviando=false,cola=null;
+ function medir(){const ahora=Date.now();if(visita&&!document.hidden&&window.RadarAcceso.activa()&&ahora-ultimo<60000)segundos+=Math.min((ahora-tick)/1000,5);tick=ahora;}
+ function actividad(){medir();ultimo=Date.now();}
+ ['pointerdown','keydown','scroll','pointermove'].forEach(t=>document.addEventListener(t,actividad,{passive:true}));
+ async function enviar(){if(!visita||enviando||!window.RadarAcceso.activa()||window.RadarFotos?.ocupada())return;medir();enviando=true;
+   if(!cola)cola={visita,secuencia:++secuencia,segundos:Math.floor(segundos),fichas:fichas.slice()};
+   const copia=cola;try{const r=await window.RadarAcceso.registrarUso(copia);if(r.ok&&cola===copia)cola=null;}catch(e){}finally{enviando=false;}}
+ function ficha(){if(!visita)return;const m=location.hash.match(/^#\/accion\/([^?]+)/);if(m){const id=decodeURIComponent(m[1]);if(fichas.length<1000)fichas.push(id);enviar();}}
+ window.addEventListener('radar:ingreso',()=>{visita=crypto.randomUUID();segundos=0;fichas=[];secuencia=0;cola=null;ultimo=tick=Date.now();enviar();ficha();});
+ window.addEventListener('radar:salida',()=>{visita='';cola=null;});
+ window.addEventListener('hashchange',ficha);document.addEventListener('visibilitychange',()=>{medir();enviar();});setInterval(medir,1000);setInterval(enviar,60000);
+ const E=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=String(text);return n;};
+ const duration=s=>{s=Math.round(Number(s)||0);return s>=3600?Math.floor(s/3600)+' h '+Math.floor(s%3600/60)+' min':s>=60?Math.floor(s/60)+' min '+s%60+' s':s+' s';};
+ const date=s=>new Date(s).toLocaleString('es-PE',{timeZone:'America/Lima',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+ const day=s=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(s));
+ function icon(tipo){const paths={eye:'M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12 M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',people:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M17 4a4 4 0 0 1 0 8 M22 21v-2a4 4 0 0 0-3-3.9',clock:'M12 8v4l3 2 M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20',file:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M8 13h8 M8 17h8'};const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');[['viewBox','0 0 24 24'],['width','24'],['height','24'],['fill','none'],['stroke','currentColor'],['stroke-width','1.7'],['stroke-linecap','round'],['stroke-linejoin','round'],['aria-hidden','true']].forEach(([k,v])=>svg.setAttribute(k,v));const p=document.createElementNS(svg.namespaceURI,'path');p.setAttribute('d',paths[tipo]||paths.file);svg.append(p);return svg;}
+ window.RadarEstadisticas={vista(ctx,actions){
+  const root=E('section','stats-page');if(!window.RadarAcceso.estadisticasPermitidas()){root.append(E('h2','','Acceso restringido'),E('p','','Esta sección está disponible solo para usuarios con rol de editor.'));return root;}
+  let datos=[],disposed=false,cargando=false;ctx.alSalir(()=>{disposed=true;});
+  const head=E('div','stats-head'),texts=E('div');texts.append(E('p','stats-eyebrow','ADMINISTRACIÓN · ACCESO DE EDITORES'),E('h1','','Estadísticas de uso'),E('p','stats-muted','Conoce quién consulta el radar y qué contenido despierta más interés.'));
+  const controls=E('div','stats-actions'),refresh=E('button','btn ghost','Actualizar'),link=E('a','btn ghost','Abrir registro');link.target='_blank';link.rel='noopener';link.hidden=true;controls.append(refresh,link);head.append(texts,controls);root.append(head);
+  const filters=E('div','stats-filters');
+  function select(label,options){const lab=E('label','stats-field',label),sel=E('select');options.forEach(([v,t])=>{const o=E('option','',t);o.value=v;sel.append(o);});lab.append(sel);filters.append(lab);sel.onchange=paint;return sel;}
+  const period=select('Período',[['30','Últimos 30 días'],['7','Últimos 7 días'],['1','Hoy'],['all','Todo el historial disponible']]),user=select('Usuario',[['','Todos']]),role=select('Rol',[['','Todos'],['editor','Editor'],['consultor','Consultor']]);
+  const status=E('span','stats-muted','Cargando…');status.setAttribute('role','status');filters.append(status);root.append(filters);
+  const metrics=E('div','stats-metrics'),charts=E('div','stats-charts'),tableCard=E('section','stats-card stats-table-card');root.append(metrics,charts,tableCard);
+  const th=E('div','stats-table-head'),title=E('h2','','Detalle de visitas'),search=E('input');search.type='search';search.placeholder='Buscar usuario…';search.setAttribute('aria-label','Buscar usuario');search.oninput=paint;th.append(title,search);tableCard.append(th);
+  const body=E('div','stats-table-scroll');tableCard.append(body,E('p','stats-footnote','El tiempo activo es aproximado: se pausa al ocultar la pestaña o después de 1 minuto sin interacción. Puede perderse el último minuto al cerrar. Las fichas son aperturas de detalles, no descargas.'));
+  function paint(){
+   const today=day(Date.now()),start=new Date(today+'T12:00:00Z');if(period.value!=='all')start.setUTCDate(start.getUTCDate()-Number(period.value)+1);const cutoff=period.value==='all'?'':start.toISOString().slice(0,10);
+   const visits=datos.filter(v=>(!cutoff||day(v.ingreso)>=cutoff)&&(!user.value||v.usuario===user.value)&&(!role.value||v.rol===role.value)&&(!search.value.trim()||`${v.nombre} ${v.usuario}`.toLowerCase().includes(search.value.trim().toLowerCase())));
+   metrics.replaceChildren();[['Visitas',visits.length,'Ingresos al radar','eye'],['Usuarios únicos',new Set(visits.map(v=>v.usuario)).size,'Personas que ingresaron','people'],['Tiempo activo',duration(visits.reduce((s,v)=>s+Number(v.segundos||0),0)),'Interacción estimada','clock'],['Fichas abiertas',visits.reduce((s,v)=>s+Number(v.fichas||0),0),'Consultas de acciones','file']].forEach(([label,val,desc,ic],i)=>{const card=E('section','stats-card stats-kpi'),ico=E('span','stats-icon stats-tone-'+i),txt=E('div');ico.append(icon(ic));txt.append(E('span','stats-muted',label),E('strong','',val),E('small','stats-muted',desc));card.append(ico,txt);metrics.append(card);});
+   charts.replaceChildren();const activity=E('section','stats-card'),popular=E('section','stats-card');activity.append(E('h2','','Actividad por día'),E('p','stats-muted','Número de visitas en el período seleccionado.'));const counts={};visits.forEach(v=>{const k=day(v.ingreso);counts[k]=(counts[k]||0)+1;});
+   const days=[];if(period.value==='all'){days.push(...Object.keys(counts).sort());}else{const cursor=new Date(start);while(cursor.toISOString().slice(0,10)<=today){days.push(cursor.toISOString().slice(0,10));cursor.setUTCDate(cursor.getUTCDate()+1);}}
+   const bars=E('div','stats-bars'),max=Math.max(1,...Object.values(counts));if(!visits.length)bars.append(E('p','stats-empty','Aún no hay visitas para estos filtros.'));else days.forEach(d=>{const col=E('div','stats-bar-col'),track=E('div','stats-bar-track'),bar=E('div','stats-bar');bar.style.height=((counts[d]||0)/max*100)+'%';bar.title=d+': '+(counts[d]||0)+' visitas';track.append(bar);col.append(E('small','',counts[d]||''),track,E('small','',d.slice(8)+'/'+d.slice(5,7)));bars.append(col);});activity.append(bars);
+   popular.append(E('h2','','Contenido consultado'),E('p','stats-muted','Fichas de acciones más vistas en el período.'));const ranking={};visits.forEach(v=>String(v.ids||'').split(' | ').filter(Boolean).forEach(id=>ranking[id]=(ranking[id]||0)+1));const top=Object.entries(ranking).sort((a,b)=>b[1]-a[1]).slice(0,5);
+   if(!top.length){const empty=E('div','stats-empty');empty.append(icon('file'),E('strong','','Aún no hay fichas consultadas'),E('p','stats-muted','Aquí aparecerán las acciones cuando se abran sus detalles.'));popular.append(empty);}else top.forEach(([id,n])=>{const row=E('button','stats-rank'),action=actions.find(a=>a.id===id);row.append(E('span','',action?.titulo||id),E('b','',n));row.onclick=()=>ctx.go('accion/'+encodeURIComponent(id));popular.append(row);});charts.append(activity,popular);
+   title.textContent='Detalle de visitas · '+visits.length+' registros';const table=E('table'),thead=E('thead'),tr=E('tr');['Usuario','Rol','Ingreso','Último registro','Tiempo activo','Fichas'].forEach(t=>tr.append(E('th','',t)));thead.append(tr);table.append(thead);const tbody=E('tbody');visits.forEach(v=>{const row=E('tr'),name=E('td'),person=E('div','stats-person'),avatar=E('span','stats-avatar',String(v.nombre||v.usuario).split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase()),details=E('div');details.append(E('b','',v.nombre||v.usuario),E('small','stats-muted',v.usuario));person.append(avatar,details);name.append(person);const tdRole=E('td'),badge=E('span','stats-role',v.rol==='editor'?'Editor':'Consultor');tdRole.append(badge);row.append(name,tdRole,E('td','',date(v.ingreso)),E('td','',date(v.ultimo)),E('td','',duration(v.segundos)),E('td','',v.fichas));tbody.append(row);});table.append(tbody);body.replaceChildren(table);if(!visits.length)body.append(E('p','stats-empty','Sin registros para los filtros seleccionados.'));
+  }
+  async function load(){if(cargando)return;cargando=true;refresh.disabled=true;status.textContent='Actualizando…';try{await enviar();const d=await window.RadarAcceso.estadisticas();if(disposed)return;if(!d.ok)throw Error(d.mensaje || 'Falta habilitar las estadísticas en Apps Script.');if(!Array.isArray(d.visitas))throw Error('Falta habilitar las estadísticas en Apps Script.');datos=d.visitas;if(/^https:\/\/docs\.google\.com\/spreadsheets\//.test(d.url||'')){link.href=d.url;link.hidden=false;}const selected=user.value;user.replaceChildren(new Option('Todos',''),...Array.from(new Set(datos.map(v=>v.usuario))).sort().map(u=>new Option(u,u)));user.value=selected;status.textContent='Actualizado · últimos '+datos.length+' registros (máximo 500)';paint();}catch(e){if(!disposed)status.textContent=e.message;}finally{cargando=false;refresh.disabled=false;}}
+  refresh.onclick=load;load();return root;
+ }};
+})();
+</script>
 
 </body>
 </html>
