@@ -3764,6 +3764,8 @@ function registroDesdeAccion(a) {
     "Descripción": a.descripcion || "",
     "SKU involucrado": a.sku === "—" ? "" : (a.sku || ""),
     "Canal": Array.isArray(a.canal) ? a.canal.join("; ") : (a.canal || ""),
+    "Cadena": Array.isArray(a.cadena)?a.cadena.join("; "):(a.cadena||""),
+    "Giro de negocio": Array.isArray(a.giros)?a.giros.join(" / "):(a.giro||""),
     "Ubicación": a.ubicacion === "—" ? "" : (a.ubicacion || ""),
     "Imagen principal": a.imagen || "",
     "Imágenes adicionales": extras.join(", "),
@@ -5953,7 +5955,7 @@ function montarCaptura(ctx, alGuardar, opciones) {
   const campos = {};
   const otros = {};
   const acciones = (__M_ui.dataset() && __M_ui.dataset().actions) || [];
-  const propiedades = {'Marca':'marca','Grupo':'grupo','Categoría':'categoria','Subcategoría':'subcategoria','Tipo de acción':'tipo','Canal':'canal','Fuente':'fuente'};
+  const propiedades = {'Marca':'marca','Grupo':'grupo','Categoría':'categoria','Subcategoría':'subcategoria','Tipo de acción':'tipo','Canal':'canal','Cadena':'cadena','Giro de negocio':'giros','Fuente':'fuente'};
   const fondo = h('div',{class:'alta-fondo',hidden:true});
   let overflowAnterior='';let focoPrevio=null;
   const panel = pagina ? h('section', {class:'captura-pagina', id:'captura', 'aria-label':'Nueva acción'}) : h('section', {class:'captura-panel', id:'captura', 'aria-hidden':'true', 'aria-label':'Nueva acción',role:'dialog','aria-modal':'true'});
@@ -5970,8 +5972,15 @@ function montarCaptura(ctx, alGuardar, opciones) {
   const aviso = h('p',{class:'captura-nota',role:'status','aria-live':'polite'});
   const requeridos = new Set(['Marca','Categoría','Tipo de acción','Título','Fecha','Resumen']);
   const largos = new Set(['Descripción','Resumen','Insight']);
-  const limites = {'Marca':200,'Grupo':200,'Categoría':200,'Subcategoría':200,'Tipo de acción':200,'Título':500,'Fecha':10,'Resumen':3000,'Descripción':8000,'Insight':4000,'SKU involucrado':500,'Canal':500,'Ubicación':500,'Fuente':500,'Link de referencia':2000};
-  const nombres = ['Marca','Grupo','Categoría','Subcategoría','Tipo de acción','Título','Fecha','Canal','Ubicación','SKU involucrado','Descripción','Resumen','Insight','Fuente','Link de referencia'];
+  const limites = {'Marca':200,'Grupo':200,'Categoría':200,'Subcategoría':200,'Tipo de acción':200,'Título':500,'Fecha':10,'Resumen':3000,'Descripción':8000,'Insight':4000,'SKU involucrado':500,'Canal':500,'Cadena':500,'Giro de negocio':500,'Ubicación':500,'Fuente':500,'Link de referencia':2000};
+  function validarDistribucionAlta(datos){
+    const errores=[];
+    const canal=String(datos.Canal||'').trim();
+    const cadena=String(datos.Cadena||'').trim();
+    if(cadena && !['Moderno','Digital'].includes(canal))errores.push('Cadena requiere Canal Moderno o Digital');
+    return errores;
+  }
+  const nombres = ['Marca','Grupo','Categoría','Subcategoría','Tipo de acción','Título','Fecha','Canal','Cadena','Giro de negocio','Ubicación','SKU involucrado','Descripción','Resumen','Insight','Fuente','Link de referencia'];
   const grid = h('div',{class:'captura-grid'}, ...nombres.map(nombre=>{
     const id='alta-'+nombres.indexOf(nombre);
     const etiqueta=nombre==='Resumen'?'Hallazgo':nombre==='Insight'?'Insight / estrategia para Laive':nombre;
@@ -5979,7 +5988,7 @@ function montarCaptura(ctx, alGuardar, opciones) {
     let otro=null;
     if(propiedades[nombre]){
       const opciones=[...new Set(acciones.flatMap(a=>Array.isArray(a[propiedades[nombre]])?a[propiedades[nombre]]:[a[propiedades[nombre]]]).map(v=>String(v||'').trim()).filter(v=>v&&v!=='—'))].sort((a,b)=>a.localeCompare(b,'es'));
-      const catalogo=nombre==='Categoría'?window.RadarCatalogo.categorias:nombre==='Tipo de acción'?window.RadarCatalogo.tipos:null;
+      const catalogo=nombre==='Categoría'?window.RadarCatalogo.categorias:nombre==='Tipo de acción'?window.RadarCatalogo.tipos:nombre==='Canal'?['Tradicional','Moderno','Digital','Por identificar']:nombre==='Cadena'?['Wong','Metro','Plaza Vea','Tottus']:nombre==='Giro de negocio'?['Bodega','Puesto de mercado','Mayorista','Minimarket','Tienda de conveniencia','Supermercado','No aplica','Por identificar']:null;
       control=h('select',{id,name:nombre},h('option',{value:'',text:'Selecciona una opción'}),...(catalogo||opciones).map(v=>h('option',{value:v,text:v})),catalogo?null:h('option',{value:'__OTRA__',text:'Otra opción…'}));
       otro=h('input',{type:'text',maxlength:limites[nombre],placeholder:'Escribe la nueva opción','aria-label':'Otra opción para '+etiqueta,hidden:true});
       otros[nombre]=otro;
@@ -5991,6 +6000,15 @@ function montarCaptura(ctx, alGuardar, opciones) {
     return etiquetas[nombre]=h('label',{class:'campo'+(largos.has(nombre)||nombre==='Título'?' ancho':''),for:id},h('span',{class:'eyebrow',text:etiqueta+(control.required?' *':'')}),control,otro);
 
   }));
+  function actualizarCamposDistribucion(){
+    const permite=['Moderno','Digital'].includes(campos.Canal.value);
+    campos.Cadena.disabled=!permite;
+    if(!permite)campos.Cadena.value='';
+    campos.Cadena.title=permite?'Selecciona la cadena si corresponde':'No aplica para este canal';
+    etiquetas.Cadena.style.opacity=permite?'1':'.5';
+  }
+  campos.Canal.addEventListener('change',actualizarCamposDistribucion);
+  actualizarCamposDistribucion();
   // Fecha local de Lima, sin desplazar el día por UTC.
   campos.Fecha.value=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const foto=h('input',{type:'file',accept:'image/jpeg,image/png',id:'alta-foto'});
@@ -6009,7 +6027,7 @@ function montarCaptura(ctx, alGuardar, opciones) {
     try {
       const f=foto.files[0]; const imagen=f?await procesarFoto(f):null;
       const datos={};Object.entries(campos).forEach(([k,v])=>datos[k]=(v.value==='__OTRA__'?otros[k].value:v.value).trim());
-      const erroresCatalogo=window.RadarCatalogo.validar(datos);if(erroresCatalogo.length)throw new Error(erroresCatalogo.join(' '));
+      const erroresCatalogo=window.RadarCatalogo.validar(datos).concat(validarDistribucionAlta(datos));if(erroresCatalogo.length)throw new Error(erroresCatalogo.join(' '));
       aviso.textContent='Registrando la acción en el Excel institucional…';
       creada=await window.RadarAcceso.crearAccion({solicitudId,campos:datos});
       let mensaje='Acción creada: '+creada.id;
@@ -6023,7 +6041,7 @@ function montarCaptura(ctx, alGuardar, opciones) {
       if(typeof alGuardar==='function')await alGuardar(creada.id);
     } catch(err){
       aviso.textContent=(err&&err.message)||'No se pudo confirmar el registro. Reintenta en este formulario.';
-    } finally {guardando=false;Array.from(form.elements).forEach(x=>x.disabled=false);}
+    } finally {guardando=false;Array.from(form.elements).forEach(x=>x.disabled=false);actualizarCamposDistribucion();}
   });
   if(!pagina)panel.appendChild(h('div',{class:'captura-head'},h('h3',{text:'Nueva acción'}),h('button',{class:'icon-btn','aria-label':'Cerrar',onclick:()=>alternar(false)},I('close',18))));
   if(!pagina)panel.appendChild(h('p',{class:'captura-nota',text:'Completa los campos con *. El código se genera automáticamente. Tu registro se publicará como Aprobado. La foto conserva su proporción.'}));
@@ -6046,8 +6064,8 @@ function montarCaptura(ctx, alGuardar, opciones) {
   }});
   function pintarLote(){
     tabla.replaceChildren(h('table',{style:{width:'100%',borderCollapse:'collapse',fontSize:'13px'}},
-      h('thead',{},h('tr',{},...['Fila','Título','Marca','Categoría','Tipo de acción','Fecha','Resultado'].map(t=>h('th',{text:t,style:{textAlign:'left',padding:'10px'}})))),
-      h('tbody',{},...filasLote.map(r=>h('tr',{},...[r.numero,r.campos['Título'],r.campos.Marca,r.campos['Categoría'],r.campos['Tipo de acción'],r.campos.Fecha,r.id?'Guardada: '+r.id:r.error||'Lista para cargar'].map(t=>h('td',{text:String(t||''),style:{padding:'10px',borderBottom:'1px solid var(--line)',maxWidth:'220px',overflowWrap:'anywhere'}})))))));
+      h('thead',{},h('tr',{},...['Fila','Título','Marca','Categoría','Tipo de acción','Canal','Cadena','Giro de negocio','Fecha','Resultado'].map(t=>h('th',{text:t,style:{textAlign:'left',padding:'10px'}})))),
+      h('tbody',{},...filasLote.map(r=>h('tr',{},...[r.numero,r.campos['Título'],r.campos.Marca,r.campos['Categoría'],r.campos['Tipo de acción'],r.campos.Canal,r.campos.Cadena,r.campos['Giro de negocio'],r.campos.Fecha,r.id?'Guardada: '+r.id:r.error||'Lista para cargar'].map(t=>h('td',{text:String(t||''),style:{padding:'10px',borderBottom:'1px solid var(--line)',maxWidth:'220px',overflowWrap:'anywhere'}})))))));
   }
   archivo.addEventListener('change',async()=>{
     confirmar.disabled=true;filasLote=[];tabla.replaceChildren();
@@ -6059,7 +6077,7 @@ function montarCaptura(ctx, alGuardar, opciones) {
       const matriz=XLSX.utils.sheet_to_json(wb.Sheets.Acciones,{header:1,defval:'',raw:true});
       const encabezados=(matriz.shift()||[]).map(v=>String(v).trim());
       if(new Set(encabezados).size!==encabezados.length)throw new Error('Hay encabezados repetidos.');
-      nombres.forEach(n=>{if(!encabezados.includes(n))throw new Error('Falta la columna '+n+'.');});
+      nombres.filter(n=>!['Cadena','Giro de negocio'].includes(n)).forEach(n=>{if(!encabezados.includes(n))throw new Error('Falta la columna '+n+'.');});
       matriz.forEach((valores,i)=>{
         if(!valores.some(v=>String(v).trim()))return;
         const datos={};nombres.forEach(n=>{
@@ -6067,7 +6085,7 @@ function montarCaptura(ctx, alGuardar, opciones) {
           if(n==='Fecha'&&typeof valor==='number'){const d=XLSX.SSF.parse_date_code(valor);valor=d?String(d.y).padStart(4,'0')+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0'):'';}
           datos[n]=String(valor==null?'':valor).trim();
         });
-        const errores=window.RadarCatalogo.validar(datos);nombres.forEach(n=>{if(requeridos.has(n)&&!datos[n])errores.push('Falta '+n);if(datos[n].length>limites[n])errores.push(n+' demasiado largo');});
+        const errores=window.RadarCatalogo.validar(datos).concat(validarDistribucionAlta(datos));nombres.forEach(n=>{if(requeridos.has(n)&&!datos[n])errores.push('Falta '+n);if(datos[n].length>limites[n])errores.push(n+' demasiado largo');});
         const fecha=datos.Fecha;if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)||!Number.isFinite(Date.parse(fecha))||new Date(fecha).toISOString().slice(0,10)!==fecha)errores.push('Fecha inválida: usa AAAA-MM-DD');
         if(datos['Link de referencia']&&!/^https?:\/\/\S+$/i.test(datos['Link de referencia']))errores.push('Enlace inválido');
         filasLote.push({numero:i+2,campos:datos,solicitudId:crypto.randomUUID(),error:errores.join(' · '),id:null});
@@ -6126,7 +6144,7 @@ function montarCaptura(ctx, alGuardar, opciones) {
     fotoLbl.classList.add('ancho');
     form.replaceChildren(
       sec('1','Marca y clasificación','Quién hizo la acción y en qué categoría compite.',['Marca','Grupo','Categoría','Subcategoría','Tipo de acción']),
-      sec('2','La acción','Qué se detectó, cuándo y en qué canal.',['Título','Fecha','Canal','Ubicación','SKU involucrado']),
+      sec('2','La acción','Qué se detectó, cuándo y en qué canal.',['Título','Fecha','Canal','Cadena','Giro de negocio','Ubicación','SKU involucrado']),
       sec('3','Hallazgo e insight','Lo que pasó y qué significa para Laive.',['Resumen','Descripción','Insight']),
       sec('4','Fuente y evidencia','De dónde viene el dato y la foto de portada.',['Fuente','Link de referencia'],[fotoLbl]),
       aviso,
